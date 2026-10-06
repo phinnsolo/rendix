@@ -48,6 +48,7 @@ input, textarea, select {
   background: var(--surface);
 }
 textarea { resize: vertical; }
+input[type='checkbox'], input[type='radio'] { padding: 0; border: none; }
 
 button, .button {
   font: inherit;
@@ -82,25 +83,63 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 .login .muted { margin: 0; }
 
 /* Apartados del documento */
-.blocks { display: flex; flex-direction: column; gap: 0.75rem; }
+.blocks { display: flex; flex-direction: column; gap: 0.6rem; }
 .blocks-label { font-weight: 600; }
-.block { display: flex; flex-direction: column; gap: 0.6rem; }
-.block-type { align-self: flex-start; font-size: 0.8rem; font-weight: 600; color: var(--primary); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.6rem; }
-.block-actions { justify-content: flex-end; }
-.block-actions button { padding: 0.35rem 0.7rem; font-size: 0.9rem; }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
-.form .block-field { display: flex; flex-direction: row; align-self: flex-start; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.9rem; }
-.form .block-field select { padding: 0.35rem 0.5rem; }
+.blocks > .small { margin: 0; }
+.block { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.65rem 0.75rem; }
+.block-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.block-type { font-size: 0.8rem; font-weight: 600; color: var(--primary); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 0.05rem 0.55rem; }
+.block-controls { display: flex; gap: 0.25rem; }
+.icon-button { padding: 0.15rem 0.5rem; font-size: 0.85rem; background: var(--surface); color: var(--text); border-color: var(--border); }
+.icon-button.danger { color: var(--danger); border-color: var(--border); }
+.icon-button.danger:hover:not(:disabled) { border-color: var(--danger); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+.link-button { align-self: flex-start; padding: 0.15rem 0; background: none; border: none; color: var(--primary); font-weight: 600; font-size: 0.9rem; }
+
+.form .block-field { gap: 0.25rem; font-size: 0.85rem; font-weight: 600; }
+.form .block-field.inline { flex-direction: row; align-items: center; align-self: flex-start; gap: 0.5rem; }
+.block textarea, .block input:not([type]), .block select { padding: 0.4rem 0.55rem; font-size: 0.95rem; }
+.block-field select, .block-field textarea { font-weight: 400; }
+.hint { font-size: 0.8rem; margin: -0.2rem 0 0; }
 .block-add { align-self: flex-start; cursor: pointer; color: var(--primary); border-color: var(--primary); font-weight: 600; }
 
+.mc-options { border: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+.mc-options legend { padding: 0; margin-bottom: 0.25rem; }
+.mc-option { display: flex; align-items: center; gap: 0.5rem; }
+.mc-option input:not([type]) { flex: 1; min-width: 0; }
+.mc-option input[type='radio'], .checkbox input { accent-color: var(--primary); width: 1rem; height: 1rem; margin: 0; }
+
+.tools-selector { border: none; padding: 0; margin: 0; min-width: 0; }
+.tools-selector legend { font-weight: 600; padding: 0; margin-bottom: 0.35rem; }
+.tools-selector .small { margin: 0 0 0.5rem; }
+.tools-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; }
+.tool-option { padding: 0.55rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); line-height: 1.2; }
+.tool-option:has(input:checked) { border-color: var(--primary); background: #f0f4fe; }
+.tool-option:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+.form .checkbox, .checkbox { display: flex; flex-direction: row; align-items: center; gap: 0.45rem; font-weight: 400; cursor: pointer; }
+
+.block-prompt { padding: 0; }
+.block-section { border-top: 1px dashed var(--border); padding-top: 0.5rem; }
+.block-text { padding: 0.6rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.block-answer { display: flex; flex-direction: column; gap: 0.3rem; border-top: 1px dashed var(--border); padding-top: 0.5rem; }
+.block-answer-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.mc-answer { display: flex; flex-direction: column; gap: 0.4rem; }
+.chip { font-size: 0.78rem; font-weight: 600; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); }
+.chip.correct { color: #1f7a3d; border-color: #9fd3b0; background: #eefaf1; }
+
+.exam-header { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.75rem 0; padding: 0.65rem 0.9rem; }
+.exam-header-main { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem 1rem; flex-wrap: wrap; }
+.exam-topic { font-weight: 700; font-size: 1.1rem; }
+.exam-time { font-variant-numeric: tabular-nums; }
+.exam-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; font-size: 0.9rem; }
+
 .code-editor { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.code-editor .cm-editor { min-height: 220px; max-height: 70vh; }
-.code-editor.read-only .cm-editor { min-height: 0; }
+.code-editor .cm-editor { min-height: 160px; max-height: 70vh; }
 .code-editor .cm-scroller { overflow: auto; }
 
-.geogebra-applet { position: relative; height: 560px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.geogebra-applet { position: relative; height: 520px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .geogebra-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 1rem; text-align: center; }
 
 @media (max-width: 600px) {
-  .geogebra-applet { height: 480px; }
+  .geogebra-applet { height: 460px; }
 }

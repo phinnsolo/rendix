@@ -25,7 +25,7 @@ export default function LoginPage() {
     <main className="login">
       <form className="form card" onSubmit={handleSubmit}>
         <h1>Rendix</h1>
-        <p className="muted">Ingreso de profesor</p>
+        <p className="muted">Iniciar sesión</p>
         <label>
           Usuario
           <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />

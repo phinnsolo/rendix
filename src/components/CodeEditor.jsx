@@ -27,7 +27,7 @@ function languageExtension(language) {
 // Wrapper mínimo de CodeMirror 6: el editor es la fuente de verdad del texto y avisa cada cambio con onChange.
 // `value` solo se aplica al montar o cuando difiere del contenido actual.
 // Se importa con lazy() para que CodeMirror se descargue recién cuando hay un bloque de código.
-export default function CodeEditor({ value, language, onChange, readOnly = false, label = 'Código' }) {
+export default function CodeEditor({ value, language, onChange, label = 'Código' }) {
   const parentRef = useRef(null)
   const viewRef = useRef(null)
   const languageCompartment = useRef(new Compartment())
@@ -45,8 +45,6 @@ export default function CodeEditor({ value, language, onChange, readOnly = false
           indentUnit.of('    '),
           languageCompartment.current.of(languageExtension(language)),
           theme,
-          EditorState.readOnly.of(readOnly),
-          EditorView.editable.of(!readOnly),
           EditorView.contentAttributes.of({ 'aria-label': label }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) onChangeRef.current?.(update.state.doc.toString())
@@ -73,5 +71,5 @@ export default function CodeEditor({ value, language, onChange, readOnly = false
     }
   }, [value])
 
-  return <div className={readOnly ? 'code-editor read-only' : 'code-editor'} ref={parentRef} />
+  return <div className="code-editor" ref={parentRef} />
 }

@@ -6,3 +6,13 @@ export const PROFESORES = [
   { username: 'profesor2', password: 'rendix123', nombre: 'Profesor Demo 2' },
   { username: 'profesor3', password: 'rendix123', nombre: 'Profesor Demo 3' },
 ]
+
+// Temas de examen disponibles. Para agregar o quitar temas, editar esta lista.
+export const TEMAS = ['Tema 1', 'Tema 2', 'Tema 3']
+
+// Herramientas que el profesor puede habilitar para el alumno durante el examen.
+// Son recursos generales del examen, distintos de los apartados GeoGebra dentro de una consigna.
+export const HERRAMIENTAS = {
+  calculadora: 'Calculadora',
+  geogebra: 'GeoGebra',
+}

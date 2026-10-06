@@ -1,11 +1,15 @@
-export default function TextBlock({ block, onChange, label }) {
+// Texto del apartado, separado de la consigna: el material que acompaña la consigna
+// (un texto para leer, analizar, completar…). El alumno responde aparte, con texto.
+export default function TextBlock({ block, onChange }) {
   return (
-    <textarea
-      rows={6}
-      value={block.contenido}
-      onChange={(e) => onChange({ contenido: e.target.value })}
-      placeholder="Escribí el enunciado, la consigna o una explicación…"
-      aria-label={label}
-    />
+    <label className="block-field block-section">
+      Texto
+      <textarea
+        rows={6}
+        value={block.contenido}
+        onChange={(e) => onChange({ contenido: e.target.value })}
+        placeholder="Contenido del apartado (opcional)…"
+      />
+    </label>
   )
 }
