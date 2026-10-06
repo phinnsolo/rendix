@@ -3,6 +3,7 @@
 // Cada profesor tiene su propia clave: rendix_documents_<username>.
 
 import { getSession } from './auth.js'
+import { textFromBlocks } from './documentBlocks.js'
 
 function storageKey() {
   return `rendix_documents_${getSession().username}`
@@ -28,12 +29,13 @@ export function getDocument(id) {
   return readAll().find((doc) => doc.id === id) || null
 }
 
-export function createDocument({ titulo, contenido }) {
+export function createDocument({ titulo, bloques }) {
   const ahora = new Date().toISOString()
   const doc = {
     id: crypto.randomUUID(),
     titulo,
-    contenido,
+    contenido: textFromBlocks(bloques),
+    bloques,
     fechaCreacion: ahora,
     fechaModificacion: ahora,
   }
@@ -41,11 +43,11 @@ export function createDocument({ titulo, contenido }) {
   return doc
 }
 
-export function updateDocument(id, { titulo, contenido }) {
+export function updateDocument(id, { titulo, bloques }) {
   let updated = null
   const documents = readAll().map((doc) => {
     if (doc.id !== id) return doc
-    updated = { ...doc, titulo, contenido, fechaModificacion: new Date().toISOString() }
+    updated = { ...doc, titulo, contenido: textFromBlocks(bloques), bloques, fechaModificacion: new Date().toISOString() }
     return updated
   })
   writeAll(documents)

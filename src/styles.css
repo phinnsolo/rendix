@@ -40,7 +40,7 @@ a { color: var(--primary); }
 
 .form { display: flex; flex-direction: column; gap: 1rem; }
 .form label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: 600; }
-input, textarea {
+input, textarea, select {
   font: inherit;
   padding: 0.55rem 0.65rem;
   border: 1px solid var(--border);
@@ -80,3 +80,27 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 .login .card { width: 100%; max-width: 360px; }
 .login h1 { margin: 0; }
 .login .muted { margin: 0; }
+
+/* Apartados del documento */
+.blocks { display: flex; flex-direction: column; gap: 0.75rem; }
+.blocks-label { font-weight: 600; }
+.block { display: flex; flex-direction: column; gap: 0.6rem; }
+.block-type { align-self: flex-start; font-size: 0.8rem; font-weight: 600; color: var(--primary); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.6rem; }
+.block-actions { justify-content: flex-end; }
+.block-actions button { padding: 0.35rem 0.7rem; font-size: 0.9rem; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.form .block-field { display: flex; flex-direction: row; align-self: flex-start; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+.form .block-field select { padding: 0.35rem 0.5rem; }
+.block-add { align-self: flex-start; cursor: pointer; color: var(--primary); border-color: var(--primary); font-weight: 600; }
+
+.code-editor { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.code-editor .cm-editor { min-height: 220px; max-height: 70vh; }
+.code-editor.read-only .cm-editor { min-height: 0; }
+.code-editor .cm-scroller { overflow: auto; }
+
+.geogebra-applet { position: relative; height: 560px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.geogebra-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 1rem; text-align: center; }
+
+@media (max-width: 600px) {
+  .geogebra-applet { height: 480px; }
+}
