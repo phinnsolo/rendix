@@ -2,6 +2,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteDocument, getDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import NotFound from '../components/NotFound.jsx'
+import DocumentBlocksView from '../components/DocumentBlocksView.jsx'
+import { getBlocks } from '../documentBlocks.js'
 
 export default function DocumentDetailPage() {
   const { id } = useParams()
@@ -30,7 +32,7 @@ export default function DocumentDetailPage() {
       <p className="muted small">
         Creado: {formatDate(doc.fechaCreacion)} · Modificado: {formatDate(doc.fechaModificacion)}
       </p>
-      <div className="card content">{doc.contenido || <span className="muted">(Sin contenido)</span>}</div>
+      <DocumentBlocksView blocks={getBlocks(doc)} />
     </>
   )
 }
