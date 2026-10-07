@@ -5,7 +5,7 @@
 
 import { getSession } from './auth.js'
 import { getBlocks } from './documentBlocks.js'
-import { getHerramientas, getTema } from './examSettings.js'
+import { getDuracion, getHerramientas, getTema } from './examSettings.js'
 
 function storageKey(profesor) {
   return `rendix_entregas_${profesor}`
@@ -27,15 +27,30 @@ function draftKey(parcialId) {
   return `rendix_respuestas_${getSession().username}_${parcialId}`
 }
 
+function startKey(parcialId) {
+  return `rendix_inicio_${getSession().username}_${parcialId}`
+}
+
 // --- Alumno
 
 export function getSubmissionOf(profesor, parcialId, alumno) {
   return readAll(profesor).find((e) => e.parcialId === parcialId && e.alumno === alumno) || null
 }
 
+// Momento en que el alumno tocó "Comenzar parcial" (ISO), o null si todavía no empezó.
+export function getExamStart(parcialId) {
+  return localStorage.getItem(startKey(parcialId))
+}
+
+export function startExam(parcialId) {
+  const inicio = new Date().toISOString()
+  localStorage.setItem(startKey(parcialId), inicio)
+  return inicio
+}
+
 // Guarda la entrega con una copia del parcial: si el profesor lo edita después, la entrega no cambia.
-// Cada alumno entrega una sola vez.
-export function submitExam(doc, respuestas) {
+// Cada alumno entrega una sola vez. `automatico` indica que se envió porque se terminó el tiempo.
+export function submitExam(doc, respuestas, { automatico = false } = {}) {
   const session = getSession()
   const profesor = session.profesor
   if (getSubmissionOf(profesor, doc.id, session.username)) {
@@ -50,12 +65,16 @@ export function submitExam(doc, respuestas) {
     titulo: doc.titulo,
     tema: getTema(doc),
     herramientas: getHerramientas(doc),
+    duracion: getDuracion(doc),
     bloques: getBlocks(doc),
     respuestas,
+    fechaInicio: getExamStart(doc.id),
     fechaEntrega: new Date().toISOString(),
+    enviadoPorTiempo: automatico,
   }
   writeAll(profesor, [...readAll(profesor), entrega])
   localStorage.removeItem(draftKey(doc.id))
+  localStorage.removeItem(startKey(doc.id))
   return entrega
 }
 

@@ -17,6 +17,10 @@ export const ALUMNOS = [
 // Temas de examen disponibles. Para agregar o quitar temas, editar esta lista.
 export const TEMAS = ['Tema 1', 'Tema 2', 'Tema 3']
 
+// Duración del parcial en minutos (la elige el profesor al crearlo).
+export const DURACION_MAXIMA = 120
+export const DURACION_POR_DEFECTO = 60
+
 // Herramientas que el profesor puede habilitar para el alumno durante el examen.
 // Son recursos generales del examen, distintos de los apartados GeoGebra dentro de una consigna.
 export const HERRAMIENTAS = {

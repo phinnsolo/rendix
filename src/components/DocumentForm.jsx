@@ -1,8 +1,9 @@
 import { useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createBlock, getBlocks, validateBlocks } from '../documentBlocks.js'
-import { TEMAS } from '../config.js'
-import { getHerramientas, getTema } from '../examSettings.js'
+import { DURACION_MAXIMA, DURACION_POR_DEFECTO, TEMAS } from '../config.js'
+import { getDuracion, getHerramientas, getTema, isValidDuracion } from '../examSettings.js'
+import DurationField from './DurationField.jsx'
 import DocumentBlock from './DocumentBlock.jsx'
 import BlockTypeSelector from './BlockTypeSelector.jsx'
 import TopicSelector from './TopicSelector.jsx'
@@ -25,6 +26,7 @@ export default function DocumentForm({ initialValues, onSubmit, submitLabel, can
     return TEMAS.includes(saved) ? saved : ''
   })
   const [herramientas, setHerramientas] = useState(() => getHerramientas(initialValues))
+  const [duracion, setDuracion] = useState(() => String(getDuracion(initialValues) ?? DURACION_POR_DEFECTO))
   const [bloques, setBloques] = useState(() => {
     const existing = initialValues ? getBlocks(initialValues) : []
     return existing.length > 0 ? existing : [createBlock('texto')]
@@ -62,6 +64,11 @@ export default function DocumentForm({ initialValues, onSubmit, submitLabel, can
       setError('Elegí un tema.')
       return
     }
+    const minutos = Number(duracion)
+    if (!isValidDuracion(minutos)) {
+      setError(`La duración tiene que ser entre 1 y ${DURACION_MAXIMA} minutos.`)
+      return
+    }
     const blocksError = validateBlocks(bloques)
     if (blocksError) {
       setError(blocksError)
@@ -72,7 +79,7 @@ export default function DocumentForm({ initialValues, onSubmit, submitLabel, can
       return api ? { ...block, ggbBase64: api.getBase64() } : block
     })
     try {
-      onSubmit({ titulo: titulo.trim(), tema, herramientas, bloques: saved })
+      onSubmit({ titulo: titulo.trim(), tema, herramientas, duracion: minutos, bloques: saved })
     } catch {
       setError('No se pudo guardar: el almacenamiento del navegador está lleno.')
     }
@@ -81,12 +88,14 @@ export default function DocumentForm({ initialValues, onSubmit, submitLabel, can
   return (
     <div className="form">
       {/* Los apartados quedan fuera del <form>: así ningún botón o Enter dentro de GeoGebra lo envía. */}
-      <form id={formId} className="form" onSubmit={handleSubmit}>
+      {/* noValidate: los errores se muestran con el mensaje propio del formulario. */}
+      <form id={formId} className="form" onSubmit={handleSubmit} noValidate>
         <label>
           Título
           <input value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
         </label>
         <TopicSelector value={tema} onChange={setTema} />
+        <DurationField value={duracion} onChange={setDuracion} />
         <AllowedToolsSelector value={herramientas} onChange={setHerramientas} />
       </form>
 

@@ -99,6 +99,17 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 .submissions { margin: 1rem 0 0.5rem; }
 .submissions .doc-list { margin-bottom: 1.25rem; }
 .submissions > .muted { margin: 0 0 1.25rem; }
+.exam-start p { margin: 0 0 0.5rem; line-height: 1.5; }
+.exam-start .actions { margin-top: 0.75rem; }
+.exam-header.sticky { position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 6px rgb(0 0 0 / 0.06); }
+.exam-time strong { font-size: 1.15rem; }
+.exam-time.low { color: var(--danger); }
+.exam-tools-sep { margin: 0 0.15rem; }
+.mc-setup { list-style: none; margin: 0; padding: 0.5rem 0 0; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 0.35rem; }
+.mc-setup li { display: flex; align-items: center; gap: 0.5rem; }
+.mc-setup li::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; border: 1px solid var(--muted); flex-shrink: 0; }
+.block-section .block-answer-label { display: block; margin-bottom: 0.3rem; }
+.duration-input { max-width: 10rem; }
 
 /* Apartados del documento */
 .blocks { display: flex; flex-direction: column; gap: 0.6rem; }

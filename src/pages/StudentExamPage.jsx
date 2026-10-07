@@ -3,9 +3,16 @@ import { Link, useParams } from 'react-router-dom'
 import { getSession } from '../auth.js'
 import { getPublishedDocumentOf } from '../documentsStore.js'
 import { emptyAnswer, getBlocks } from '../documentBlocks.js'
-import { getHerramientas, getTema } from '../examSettings.js'
+import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { formatDate } from '../formatDate.js'
-import { getDraftAnswers, getSubmissionOf, saveDraftAnswers, submitExam } from '../submissionsStore.js'
+import {
+  getDraftAnswers,
+  getExamStart,
+  getSubmissionOf,
+  saveDraftAnswers,
+  startExam,
+  submitExam,
+} from '../submissionsStore.js'
 import ExamBlocks from '../components/ExamBlocks.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import NotFound from '../components/NotFound.jsx'
@@ -23,31 +30,79 @@ function isUnanswered(block, value) {
   return false
 }
 
+// El parcial pasa por tres estados: sin empezar → resolviendo (con reloj) → entregado.
 export default function StudentExamPage() {
   const { id } = useParams()
   const session = getSession()
   const doc = getPublishedDocumentOf(session.profesor, id)
   const [entrega, setEntrega] = useState(() => getSubmissionOf(session.profesor, id, session.username))
+  const [inicio, setInicio] = useState(() => getExamStart(id))
 
   if (!entrega && !doc) {
     return <NotFound backTo="/alumno" backLabel="Volver a parciales" />
   }
 
+  let content
+  if (entrega) content = <SubmittedExam entrega={entrega} />
+  else if (!inicio) content = <ExamIntro doc={doc} onStart={() => setInicio(startExam(doc.id))} />
+  else content = <ExamInProgress doc={doc} inicio={inicio} onSubmitted={setEntrega} />
+
   return (
     <>
       <p><Link to="/alumno">← Volver a parciales</Link></p>
-      {entrega
-        ? <SubmittedExam entrega={entrega} />
-        : <ExamInProgress doc={doc} onSubmitted={setEntrega} />}
+      {content}
     </>
   )
 }
 
-function ExamInProgress({ doc, onSubmitted }) {
+function ExamIntro({ doc, onStart }) {
+  const duracion = getDuracion(doc)
+  const apartados = getBlocks(doc).length
+
+  function handleStart() {
+    const mensaje = duracion == null
+      ? '¿Comenzar el parcial?'
+      : `Tenés ${duracion} minutos. El tiempo empieza a correr y no se puede pausar. ¿Comenzar?`
+    if (window.confirm(mensaje)) onStart()
+  }
+
+  return (
+    <>
+      <h1>{doc.titulo}</h1>
+      <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} duracion={duracion} />
+      <div className="card exam-start">
+        <p>
+          {apartados === 1 ? 'El parcial tiene 1 apartado.' : `El parcial tiene ${apartados} apartados.`}{' '}
+          {duracion == null
+            ? 'No tiene límite de tiempo.'
+            : `Vas a tener ${duracion} minutos desde que lo comiences; al terminar el tiempo se envía automáticamente.`}
+        </p>
+        <p className="muted small">Una vez enviado no se puede modificar.</p>
+        <div className="actions">
+          <button type="button" onClick={handleStart}>Comenzar parcial</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function ExamInProgress({ doc, inicio, onSubmitted }) {
   const [blocks] = useState(() => getBlocks(doc))
   const [respuestas, setRespuestas] = useState(() => initialAnswers(blocks, doc.id))
   const [error, setError] = useState('')
   const geogebraApis = useRef(new Map())
+  const enviado = useRef(false)
+
+  const duracion = getDuracion(doc)
+  const deadline = duracion == null ? null : Date.parse(inicio) + duracion * 60_000
+  const [ahora, setAhora] = useState(Date.now)
+  const segundosRestantes = deadline == null ? null : Math.max(0, Math.ceil((deadline - ahora) / 1000))
+
+  useEffect(() => {
+    if (deadline == null) return
+    const timer = setInterval(() => setAhora(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [deadline])
 
   // El progreso se guarda en cada cambio para no perderlo al recargar. GeoGebra se lee recién al enviar.
   useEffect(() => {
@@ -57,27 +112,45 @@ function ExamInProgress({ doc, onSubmitted }) {
     saveDraftAnswers(doc.id, sinGeoGebra)
   }, [blocks, doc.id, respuestas])
 
-  function handleSubmit() {
-    const sinResponder = blocks.filter((block) => isUnanswered(block, respuestas[block.id])).length
-    const aviso = sinResponder === 0
-      ? ''
-      : sinResponder === 1 ? 'Tenés 1 apartado sin responder. ' : `Tenés ${sinResponder} apartados sin responder. `
-    if (!window.confirm(`${aviso}Una vez enviado no se puede modificar. ¿Enviar el parcial?`)) return
-
+  function enviar({ automatico }) {
+    if (enviado.current) return
     const finales = { ...respuestas }
     for (const [blockId, api] of geogebraApis.current) finales[blockId] = api.getBase64()
     try {
-      onSubmitted(submitExam(doc, finales))
+      const entrega = submitExam(doc, finales, { automatico })
+      enviado.current = true
+      onSubmitted(entrega)
       window.scrollTo(0, 0)
     } catch (e) {
       setError(e.message.startsWith('Este parcial') ? e.message : 'No se pudo enviar: el almacenamiento del navegador está lleno.')
     }
   }
 
+  // Se terminó el tiempo (o ya había terminado al abrir la página): se envía con lo respondido.
+  useEffect(() => {
+    if (segundosRestantes === 0) enviar({ automatico: true })
+  })
+
+  function handleSubmit() {
+    const sinResponder = blocks.filter((block) => isUnanswered(block, respuestas[block.id])).length
+    const aviso = sinResponder === 0
+      ? ''
+      : sinResponder === 1 ? 'Tenés 1 apartado sin responder. ' : `Tenés ${sinResponder} apartados sin responder. `
+    if (window.confirm(`${aviso}Una vez enviado no se puede modificar. ¿Enviar el parcial?`)) {
+      enviar({ automatico: false })
+    }
+  }
+
   return (
     <>
       <h1>{doc.titulo}</h1>
-      <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} />
+      <ExamHeader
+        tema={getTema(doc)}
+        herramientas={getHerramientas(doc)}
+        duracion={duracion}
+        segundosRestantes={segundosRestantes}
+        sticky
+      />
       <div className="blocks">
         <ExamBlocks
           blocks={blocks}
@@ -103,9 +176,12 @@ function SubmittedExam({ entrega }) {
     <>
       <h1>{entrega.titulo}</h1>
       <div className="card notice">
-        <span className="chip published">Entregado</span> Enviaste este parcial el {formatDate(entrega.fechaEntrega)}. Ya no se puede modificar.
+        <span className="chip published">Entregado</span>
+        {entrega.enviadoPorTiempo
+          ? `Se terminó el tiempo: tu parcial se envió automáticamente el ${formatDate(entrega.fechaEntrega)}.`
+          : `Enviaste este parcial el ${formatDate(entrega.fechaEntrega)}. Ya no se puede modificar.`}
       </div>
-      <ExamHeader tema={entrega.tema} herramientas={entrega.herramientas} />
+      <ExamHeader tema={entrega.tema} herramientas={entrega.herramientas} duracion={entrega.duracion ?? null} />
       <div className="blocks">
         <ExamBlocks blocks={entrega.bloques} respuestas={entrega.respuestas} readOnly />
       </div>

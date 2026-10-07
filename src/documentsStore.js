@@ -52,7 +52,7 @@ export function getPublishedDocumentOf(profesor, id) {
   return getPublishedDocumentsOf(profesor).find((doc) => doc.id === id) || null
 }
 
-export function createDocument({ titulo, tema, herramientas, bloques }) {
+export function createDocument({ titulo, tema, herramientas, duracion, bloques }) {
   const ahora = new Date().toISOString()
   const doc = {
     id: crypto.randomUUID(),
@@ -61,6 +61,7 @@ export function createDocument({ titulo, tema, herramientas, bloques }) {
     titulo,
     tema,
     herramientas,
+    duracion,
     contenido: textFromBlocks(bloques),
     bloques,
     fechaCreacion: ahora,
@@ -70,7 +71,7 @@ export function createDocument({ titulo, tema, herramientas, bloques }) {
   return doc
 }
 
-export function updateDocument(id, { titulo, tema, herramientas, bloques }) {
+export function updateDocument(id, { titulo, tema, herramientas, duracion, bloques }) {
   let updated = null
   const documents = readAll().map((doc) => {
     if (doc.id !== id) return doc
@@ -79,6 +80,7 @@ export function updateDocument(id, { titulo, tema, herramientas, bloques }) {
       titulo,
       tema,
       herramientas,
+      duracion,
       contenido: textFromBlocks(bloques),
       bloques,
       fechaModificacion: new Date().toISOString(),

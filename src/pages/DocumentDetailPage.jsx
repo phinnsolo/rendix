@@ -5,7 +5,7 @@ import NotFound from '../components/NotFound.jsx'
 import DocumentBlocksView from '../components/DocumentBlocksView.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import { getBlocks } from '../documentBlocks.js'
-import { getHerramientas, getTema } from '../examSettings.js'
+import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
 
 export default function DocumentDetailPage() {
@@ -56,7 +56,10 @@ export default function DocumentDetailPage() {
                     <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="doc-title">
                       {entrega.alumnoNombre}
                     </Link>
-                    <p className="muted small">Entregado: {formatDate(entrega.fechaEntrega)}</p>
+                    <p className="muted small">
+                      Entregado: {formatDate(entrega.fechaEntrega)}
+                      {entrega.enviadoPorTiempo && <> <span className="chip pending">Enviado por tiempo</span></>}
+                    </p>
                   </div>
                   <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="button secondary">Ver entrega</Link>
                 </li>
@@ -67,7 +70,7 @@ export default function DocumentDetailPage() {
         </section>
       )}
 
-      <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} />
+      <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} duracion={getDuracion(doc)} />
       <DocumentBlocksView blocks={getBlocks(doc)} />
     </>
   )

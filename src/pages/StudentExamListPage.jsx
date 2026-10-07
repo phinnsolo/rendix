@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom'
 import { getSession } from '../auth.js'
 import { HERRAMIENTAS, PROFESORES } from '../config.js'
 import { getPublishedDocumentsOf } from '../documentsStore.js'
-import { getHerramientas, getTema } from '../examSettings.js'
+import { formatDuracion, getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { formatDate } from '../formatDate.js'
-import { getSubmissionOf } from '../submissionsStore.js'
+import { getExamStart, getSubmissionOf } from '../submissionsStore.js'
 
 // Lista de parciales publicados por el profesor del alumno, con el estado de su entrega.
 export default function StudentExamListPage() {
@@ -24,16 +24,17 @@ export default function StudentExamListPage() {
             const herramientas = getHerramientas(doc)
             const habilitadas = Object.entries(HERRAMIENTAS).filter(([key]) => herramientas[key])
             const entrega = getSubmissionOf(profesor.username, doc.id, session.username)
+            const enCurso = !entrega && getExamStart(doc.id) !== null
             return (
               <li key={doc.id} className="card student-exam">
                 <div className="student-exam-main">
                   <Link to={`/alumno/parciales/${doc.id}`} className="doc-title">{doc.titulo}</Link>
                   {entrega
                     ? <span className="chip published">Entregado: {formatDate(entrega.fechaEntrega)}</span>
-                    : <span className="chip pending">Pendiente</span>}
+                    : <span className="chip pending">{enCurso ? 'En curso' : 'Pendiente'}</span>}
                 </div>
                 <p className="muted small">
-                  {profesor.nombre}{tema && ` · ${tema}`} · Publicado: {formatDate(doc.fechaPublicacion)}
+                  {profesor.nombre}{tema && ` · ${tema}`} · Duración: {formatDuracion(getDuracion(doc))} · Publicado: {formatDate(doc.fechaPublicacion)}
                 </p>
                 <div className="exam-tools">
                   <span className="muted">Herramientas:</span>
@@ -43,7 +44,7 @@ export default function StudentExamListPage() {
                 </div>
                 <div className="actions">
                   <Link to={`/alumno/parciales/${doc.id}`} className={entrega ? 'button secondary' : 'button'}>
-                    {entrega ? 'Ver entrega' : 'Resolver'}
+                    {entrega ? 'Ver entrega' : enCurso ? 'Continuar' : 'Resolver'}
                   </Link>
                 </div>
               </li>
