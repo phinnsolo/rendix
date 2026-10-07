@@ -64,8 +64,7 @@ export function validateBlocks(bloques) {
   return null
 }
 
-// Respuesta inicial del alumno para un apartado. Todavía no se guardan respuestas:
-// esto define su forma para cuando exista el flujo de alumno.
+// Respuesta inicial del alumno para un apartado. Define también la forma en que se guarda en la entrega.
 export function emptyAnswer(block) {
   if (block.tipo === 'codigo') return block.contenido
   if (block.tipo === 'geogebra') return block.ggbBase64

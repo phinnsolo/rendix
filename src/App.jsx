@@ -8,6 +8,8 @@ import DocumentCreatePage from './pages/DocumentCreatePage.jsx'
 import DocumentDetailPage from './pages/DocumentDetailPage.jsx'
 import DocumentEditPage from './pages/DocumentEditPage.jsx'
 import StudentExamListPage from './pages/StudentExamListPage.jsx'
+import StudentExamPage from './pages/StudentExamPage.jsx'
+import SubmissionDetailPage from './pages/SubmissionDetailPage.jsx'
 
 export default function App() {
   return (
@@ -25,6 +27,7 @@ export default function App() {
         <Route path="/documentos/nuevo" element={<DocumentCreatePage />} />
         <Route path="/documentos/:id" element={<DocumentDetailPage />} />
         <Route path="/documentos/:id/editar" element={<DocumentEditPage />} />
+        <Route path="/documentos/:id/entregas/:entregaId" element={<SubmissionDetailPage />} />
       </Route>
       <Route
         element={
@@ -34,6 +37,7 @@ export default function App() {
         }
       >
         <Route path="/alumno" element={<StudentExamListPage />} />
+        <Route path="/alumno/parciales/:id" element={<StudentExamPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -4,6 +4,7 @@
 
 import { getSession } from './auth.js'
 import { textFromBlocks } from './documentBlocks.js'
+import { deleteSubmissionsFor } from './submissionsStore.js'
 
 export const ESTADOS = { borrador: 'borrador', publicado: 'publicado' }
 
@@ -45,6 +46,10 @@ export function getPublishedDocumentsOf(profesor) {
   return readAll(profesor)
     .filter((doc) => isPublished(doc) && (doc.profesor ?? profesor) === profesor)
     .sort((a, b) => b.fechaPublicacion.localeCompare(a.fechaPublicacion))
+}
+
+export function getPublishedDocumentOf(profesor, id) {
+  return getPublishedDocumentsOf(profesor).find((doc) => doc.id === id) || null
 }
 
 export function createDocument({ titulo, tema, herramientas, bloques }) {
@@ -97,4 +102,5 @@ export function publishDocument(id) {
 
 export function deleteDocument(id) {
   writeAll(readAll().filter((doc) => doc.id !== id))
+  deleteSubmissionsFor(id)
 }

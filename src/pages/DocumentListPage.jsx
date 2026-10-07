@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { deleteDocument, getDocuments, isPublished, publishDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
+import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
 
 const TABS = {
   creados: { label: 'Creados', vacio: 'No hay parciales sin publicar.' },
@@ -16,7 +17,9 @@ export default function DocumentListPage() {
   const visibles = documents.filter((doc) => isPublished(doc) === (tab === 'publicados'))
 
   function handleDelete(doc) {
-    if (window.confirm(`¿Eliminar "${doc.titulo}"?`)) {
+    const entregas = getSubmissionsFor(doc.id).length
+    const aviso = entregas > 0 ? ` También se borran sus ${entregasLabel(entregas)}.` : ''
+    if (window.confirm(`¿Eliminar "${doc.titulo}"?${aviso}`)) {
       deleteDocument(doc.id)
       setDocuments(getDocuments())
     }
@@ -62,7 +65,7 @@ export default function DocumentListPage() {
                 <p className="muted small">
                   {doc.tema && `${doc.tema} · `}
                   {isPublished(doc)
-                    ? `Publicado: ${formatDate(doc.fechaPublicacion)}`
+                    ? `Publicado: ${formatDate(doc.fechaPublicacion)} · ${entregasLabel(getSubmissionsFor(doc.id).length)}`
                     : `Modificado: ${formatDate(doc.fechaModificacion)}`}
                 </p>
               </div>

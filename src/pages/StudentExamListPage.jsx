@@ -1,11 +1,12 @@
+import { Link } from 'react-router-dom'
 import { getSession } from '../auth.js'
 import { HERRAMIENTAS, PROFESORES } from '../config.js'
 import { getPublishedDocumentsOf } from '../documentsStore.js'
 import { getHerramientas, getTema } from '../examSettings.js'
 import { formatDate } from '../formatDate.js'
+import { getSubmissionOf } from '../submissionsStore.js'
 
-// Lista de parciales publicados por el profesor del alumno.
-// Las cards no tienen acción: rendir el parcial todavía no está implementado.
+// Lista de parciales publicados por el profesor del alumno, con el estado de su entrega.
 export default function StudentExamListPage() {
   const session = getSession()
   const profesor = PROFESORES.find((p) => p.username === session?.profesor)
@@ -22,11 +23,14 @@ export default function StudentExamListPage() {
             const tema = getTema(doc)
             const herramientas = getHerramientas(doc)
             const habilitadas = Object.entries(HERRAMIENTAS).filter(([key]) => herramientas[key])
+            const entrega = getSubmissionOf(profesor.username, doc.id, session.username)
             return (
               <li key={doc.id} className="card student-exam">
                 <div className="student-exam-main">
-                  <span className="doc-title">{doc.titulo}</span>
-                  <span className="chip published">Publicado</span>
+                  <Link to={`/alumno/parciales/${doc.id}`} className="doc-title">{doc.titulo}</Link>
+                  {entrega
+                    ? <span className="chip published">Entregado: {formatDate(entrega.fechaEntrega)}</span>
+                    : <span className="chip pending">Pendiente</span>}
                 </div>
                 <p className="muted small">
                   {profesor.nombre}{tema && ` · ${tema}`} · Publicado: {formatDate(doc.fechaPublicacion)}
@@ -36,6 +40,11 @@ export default function StudentExamListPage() {
                   {habilitadas.length === 0
                     ? <span className="muted">ninguna</span>
                     : habilitadas.map(([key, label]) => <span key={key} className="chip">{label}</span>)}
+                </div>
+                <div className="actions">
+                  <Link to={`/alumno/parciales/${doc.id}`} className={entrega ? 'button secondary' : 'button'}>
+                    {entrega ? 'Ver entrega' : 'Resolver'}
+                  </Link>
                 </div>
               </li>
             )

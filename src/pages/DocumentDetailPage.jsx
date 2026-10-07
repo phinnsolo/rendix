@@ -6,6 +6,7 @@ import DocumentBlocksView from '../components/DocumentBlocksView.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import { getBlocks } from '../documentBlocks.js'
 import { getHerramientas, getTema } from '../examSettings.js'
+import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
 
 export default function DocumentDetailPage() {
   const { id } = useParams()
@@ -16,9 +17,11 @@ export default function DocumentDetailPage() {
 
   const publicado = isPublished(doc)
   const listPath = publicado ? '/documentos?tab=publicados' : '/documentos'
+  const entregas = getSubmissionsFor(doc.id)
 
   function handleDelete() {
-    if (window.confirm(`¿Eliminar "${doc.titulo}"?`)) {
+    const aviso = entregas.length > 0 ? ` También se borran sus ${entregasLabel(entregas.length)}.` : ''
+    if (window.confirm(`¿Eliminar "${doc.titulo}"?${aviso}`)) {
       deleteDocument(doc.id)
       navigate(listPath)
     }
@@ -39,6 +42,31 @@ export default function DocumentDetailPage() {
         Creado: {formatDate(doc.fechaCreacion)} · Modificado: {formatDate(doc.fechaModificacion)}
         {publicado && ` · Publicado: ${formatDate(doc.fechaPublicacion)}`}
       </p>
+
+      {publicado && (
+        <section className="submissions">
+          <h2>Entregas ({entregas.length})</h2>
+          {entregas.length === 0 ? (
+            <p className="muted">Todavía no hay entregas.</p>
+          ) : (
+            <ul className="doc-list">
+              {entregas.map((entrega) => (
+                <li key={entrega.id} className="card">
+                  <div>
+                    <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="doc-title">
+                      {entrega.alumnoNombre}
+                    </Link>
+                    <p className="muted small">Entregado: {formatDate(entrega.fechaEntrega)}</p>
+                  </div>
+                  <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="button secondary">Ver entrega</Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <h2>Parcial</h2>
+        </section>
+      )}
+
       <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} />
       <DocumentBlocksView blocks={getBlocks(doc)} />
     </>

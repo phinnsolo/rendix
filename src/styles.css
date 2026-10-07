@@ -89,6 +89,16 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 .doc-list li.student-exam { flex-direction: column; align-items: stretch; gap: 0.35rem; }
 .student-exam .small { margin: 0; }
 .student-exam-main { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.student-exam .actions { margin-top: 0.25rem; }
+.chip.pending { color: #8a5a00; border-color: #f0d28a; background: #fff8e6; }
+
+/* Resolución y entregas */
+.notice { margin: 0 0 0.75rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.exam-submit { align-items: center; margin-top: 1rem; }
+.exam-submit .small { margin: 0; }
+.submissions { margin: 1rem 0 0.5rem; }
+.submissions .doc-list { margin-bottom: 1.25rem; }
+.submissions > .muted { margin: 0 0 1.25rem; }
 
 /* Apartados del documento */
 .blocks { display: flex; flex-direction: column; gap: 0.6rem; }
