@@ -169,6 +169,64 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .geogebra-applet { position: relative; height: 520px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .geogebra-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 1rem; text-align: center; }
 
+/* Publicar desde el detalle */
+.publish-bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; border-color: var(--primary); background: #f0f4fe; }
+.publish-bar .small { margin: 0.15rem 0 0; }
+
+/* Navegación y panel del profesor */
+.header nav { display: flex; gap: 1rem; }
+.header nav a.active { font-weight: 600; }
+.nav-badge { display: inline-block; min-width: 1.2rem; margin-left: 0.3rem; padding: 0 0.35rem; border-radius: 999px; background: var(--danger); color: #fff; font-size: 0.75rem; font-weight: 700; text-align: center; line-height: 1.2rem; }
+.dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; }
+.chips-line .chip { margin-right: 0.3rem; }
+.chip.incorrect { color: var(--danger); border-color: #f1b5b5; background: #fdf0f0; }
+
+/* Corrección */
+.grading { margin-top: 1rem; }
+.grading-header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.grading-header h2 { margin: 0; }
+.grade-input { max-width: 8rem; }
+.grading textarea { font-weight: 400; }
+.grading-actions { align-items: center; }
+.grading-actions .small { margin: 0; }
+
+/* Herramientas del alumno: pestañas a la izquierda y ventanitas flotantes */
+.tools-dock { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 20; }
+.tools-tabs { display: flex; flex-direction: column; gap: 0.35rem; }
+.tools-tab { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; width: 4.5rem; padding: 0.5rem 0.25rem; border-radius: 0 8px 8px 0; border-left: none; background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: 0 2px 6px rgb(0 0 0 / 0.08); font-size: 0.72rem; font-weight: 600; }
+.tools-tab span[aria-hidden] { font-size: 1.2rem; }
+.tools-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.tools-window { position: fixed; left: 5rem; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; max-height: calc(100vh - 2rem); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.18); overflow: hidden; }
+.tools-window[hidden] { display: none; }
+.tools-window-calculadora { width: 300px; }
+.tools-window-geogebra { width: min(640px, calc(100vw - 6rem)); }
+.tools-window-header { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0.6rem 0.45rem 0.85rem; border-bottom: 1px solid var(--border); background: var(--bg); }
+.tools-window-body { padding: 0.6rem; overflow: auto; }
+.tool-geogebra .geogebra-applet { height: min(480px, calc(100vh - 7rem)); }
+
+.calculator { display: flex; flex-direction: column; gap: 0.5rem; }
+.calculator-display { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.calculator-history { font-size: 0.8rem; text-align: right; min-height: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calculator-display input { border: none; background: none; padding: 0; text-align: right; font-size: 1.4rem; font-variant-numeric: tabular-nums; outline: none; }
+.calculator-status { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; min-height: 1.2rem; }
+.calculator-status .link-button { padding: 0; font-size: 0.75rem; }
+.calculator-keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; }
+.calc-key { padding: 0.5rem 0; font-size: 0.9rem; background: var(--bg); color: var(--text); border-color: var(--border); }
+.calc-key.digit { background: var(--surface); font-weight: 600; }
+.calc-key.equals { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
+.calc-key:active { filter: brightness(0.92); }
+
+@media (max-width: 1040px) {
+  .tools-tab { width: 2.75rem; }
+  .tools-tab-label { display: none; }
+  .tools-window { left: 3.25rem; }
+}
+
 @media (max-width: 600px) {
   .geogebra-applet { height: 460px; }
+  .tools-dock { top: auto; bottom: 0.75rem; transform: none; }
+  .tools-tabs { flex-direction: row; padding-left: 0.5rem; }
+  .tools-tab { border-radius: 8px; border-left: 1px solid var(--border); width: 4rem; }
+  .tools-window { left: 0.5rem; right: 0.5rem; top: auto; bottom: 5rem; transform: none; width: auto; max-height: 70vh; }
+  .tools-window-calculadora, .tools-window-geogebra { width: auto; }
 }

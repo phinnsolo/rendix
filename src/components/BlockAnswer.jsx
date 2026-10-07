@@ -28,6 +28,9 @@ export default function BlockAnswer({ block, value, onChange, showCorrect = fals
             />
             {opcion.texto}
             {showCorrect && opcion.correcta && <span className="chip correct">Correcta</span>}
+            {showCorrect && readOnly && value === opcion.id && !opcion.correcta && (
+              <span className="chip incorrect">Incorrecta</span>
+            )}
           </label>
         ))}
       </div>

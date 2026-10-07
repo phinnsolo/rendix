@@ -1,9 +1,11 @@
+import { useReducer, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { deleteDocument, getDocument, isPublished } from '../documentsStore.js'
+import { deleteDocument, getDocument, isPublished, publishDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import NotFound from '../components/NotFound.jsx'
 import DocumentBlocksView from '../components/DocumentBlocksView.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
+import SubmissionChips from '../components/SubmissionChips.jsx'
 import { getBlocks } from '../documentBlocks.js'
 import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
@@ -11,6 +13,9 @@ import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
 export default function DocumentDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Al publicar, el parcial se vuelve a leer del almacenamiento.
+  const [, refresh] = useReducer((n) => n + 1, 0)
+  const [recienPublicado, setRecienPublicado] = useState(false)
   const doc = getDocument(id)
 
   if (!doc) return <NotFound />
@@ -27,6 +32,15 @@ export default function DocumentDetailPage() {
     }
   }
 
+  function handlePublish() {
+    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos van a poder verlo.`)) {
+      publishDocument(doc.id)
+      setRecienPublicado(true)
+      refresh()
+      window.scrollTo(0, 0)
+    }
+  }
+
   return (
     <>
       <p><Link to={listPath}>← Volver a parciales</Link></p>
@@ -37,6 +51,11 @@ export default function DocumentDetailPage() {
           <button type="button" className="danger" onClick={handleDelete}>Eliminar</button>
         </div>
       </div>
+      {recienPublicado && (
+        <div className="card notice">
+          <span className="chip published">Publicado</span> Tus alumnos ya pueden ver y resolver este parcial.
+        </div>
+      )}
       <p className="muted small">
         <span className={publicado ? 'chip published' : 'chip'}>{publicado ? 'Publicado' : 'Sin publicar'}</span>{' '}
         Creado: {formatDate(doc.fechaCreacion)} · Modificado: {formatDate(doc.fechaModificacion)}
@@ -56,12 +75,13 @@ export default function DocumentDetailPage() {
                     <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="doc-title">
                       {entrega.alumnoNombre}
                     </Link>
-                    <p className="muted small">
-                      Entregado: {formatDate(entrega.fechaEntrega)}
-                      {entrega.enviadoPorTiempo && <> <span className="chip pending">Enviado por tiempo</span></>}
+                    <p className="muted small chips-line">
+                      Entregado: {formatDate(entrega.fechaEntrega)} <SubmissionChips entrega={entrega} />
                     </p>
                   </div>
-                  <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="button secondary">Ver entrega</Link>
+                  <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="button secondary">
+                    Ver entrega
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -72,6 +92,16 @@ export default function DocumentDetailPage() {
 
       <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} duracion={getDuracion(doc)} />
       <DocumentBlocksView blocks={getBlocks(doc)} />
+
+      {!publicado && (
+        <div className="card publish-bar">
+          <div>
+            <strong>¿Está listo?</strong>
+            <p className="muted small">Al publicarlo, tus alumnos van a poder verlo y resolverlo.</p>
+          </div>
+          <button type="button" onClick={handlePublish}>Publicar parcial</button>
+        </div>
+      )}
     </>
   )
 }

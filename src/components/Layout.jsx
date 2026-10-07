@@ -1,10 +1,19 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useReducer } from 'react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { getRole, getSession, homePath, logout } from '../auth.js'
+import { CORRECCION_EVENT, getAllSubmissions, isGraded } from '../submissionsStore.js'
 
 export default function Layout() {
   const navigate = useNavigate()
   const session = getSession()
   const esAlumno = getRole(session) === 'alumno'
+  // useNavigate re-renderiza el Layout en cada navegación; al corregir sin navegar, avisa CORRECCION_EVENT.
+  const [, refresh] = useReducer((n) => n + 1, 0)
+  useEffect(() => {
+    window.addEventListener(CORRECCION_EVENT, refresh)
+    return () => window.removeEventListener(CORRECCION_EVENT, refresh)
+  }, [])
+  const sinCorregir = esAlumno ? 0 : getAllSubmissions().filter((e) => !isGraded(e)).length
 
   function handleLogout() {
     logout()
@@ -16,7 +25,12 @@ export default function Layout() {
       <header className="header">
         <Link to={homePath(session)} className="brand">Rendix</Link>
         <nav>
-          <Link to={esAlumno ? '/alumno' : '/documentos'}>Parciales</Link>
+          <NavLink to={esAlumno ? '/alumno' : '/documentos'}>Parciales</NavLink>
+          {!esAlumno && (
+            <NavLink to="/entregas">
+              Entregas{sinCorregir > 0 && <span className="nav-badge" aria-label={`${sinCorregir} sin corregir`}>{sinCorregir}</span>}
+            </NavLink>
+          )}
         </nav>
         <div className="header-user">
           <span>{session?.nombre}</span>

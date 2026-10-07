@@ -15,6 +15,7 @@ import {
 } from '../submissionsStore.js'
 import ExamBlocks from '../components/ExamBlocks.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
+import ExamToolsPanel from '../components/ExamToolsPanel.jsx'
 import NotFound from '../components/NotFound.jsx'
 
 function initialAnswers(blocks, parcialId) {
@@ -151,6 +152,7 @@ function ExamInProgress({ doc, inicio, onSubmitted }) {
         segundosRestantes={segundosRestantes}
         sticky
       />
+      <ExamToolsPanel herramientas={getHerramientas(doc)} />
       <div className="blocks">
         <ExamBlocks
           blocks={blocks}

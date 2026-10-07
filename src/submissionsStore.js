@@ -110,6 +110,34 @@ export function getSubmission(id) {
   return readAll(getSession().username).find((e) => e.id === id) || null
 }
 
+// Todas las entregas de los parciales del profesor, de la más nueva a la más vieja.
+export function getAllSubmissions() {
+  return readAll(getSession().username).sort((a, b) => b.fechaEntrega.localeCompare(a.fechaEntrega))
+}
+
+export function isGraded(entrega) {
+  return entrega?.correccion != null
+}
+
+// Nota (0 a 10) y devolución del profesor. Se puede volver a guardar para cambiarla.
+export function gradeSubmission(id, { nota, comentario }) {
+  const profesor = getSession().username
+  let updated = null
+  writeAll(
+    profesor,
+    readAll(profesor).map((e) => {
+      if (e.id !== id) return e
+      updated = { ...e, correccion: { nota, comentario, fecha: new Date().toISOString() } }
+      return updated
+    })
+  )
+  window.dispatchEvent(new Event(CORRECCION_EVENT))
+  return updated
+}
+
+// Avisa que cambió una corrección (lo usa el contador de "sin corregir" del header).
+export const CORRECCION_EVENT = 'rendix:correccion'
+
 export function deleteSubmissionsFor(parcialId) {
   const profesor = getSession().username
   writeAll(profesor, readAll(profesor).filter((e) => e.parcialId !== parcialId))

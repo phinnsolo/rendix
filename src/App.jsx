@@ -10,6 +10,7 @@ import DocumentEditPage from './pages/DocumentEditPage.jsx'
 import StudentExamListPage from './pages/StudentExamListPage.jsx'
 import StudentExamPage from './pages/StudentExamPage.jsx'
 import SubmissionDetailPage from './pages/SubmissionDetailPage.jsx'
+import SubmissionsPage from './pages/SubmissionsPage.jsx'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/documentos/:id" element={<DocumentDetailPage />} />
         <Route path="/documentos/:id/editar" element={<DocumentEditPage />} />
         <Route path="/documentos/:id/entregas/:entregaId" element={<SubmissionDetailPage />} />
+        <Route path="/entregas" element={<SubmissionsPage />} />
       </Route>
       <Route
         element={
