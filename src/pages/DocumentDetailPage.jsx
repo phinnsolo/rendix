@@ -3,7 +3,9 @@ import { deleteDocument, getDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import NotFound from '../components/NotFound.jsx'
 import DocumentBlocksView from '../components/DocumentBlocksView.jsx'
+import ExamHeader from '../components/ExamHeader.jsx'
 import { getBlocks } from '../documentBlocks.js'
+import { getHerramientas, getTema } from '../examSettings.js'
 
 export default function DocumentDetailPage() {
   const { id } = useParams()
@@ -32,6 +34,7 @@ export default function DocumentDetailPage() {
       <p className="muted small">
         Creado: {formatDate(doc.fechaCreacion)} · Modificado: {formatDate(doc.fechaModificacion)}
       </p>
+      <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} />
       <DocumentBlocksView blocks={getBlocks(doc)} />
     </>
   )

@@ -28,7 +28,9 @@ export default function DocumentListPage() {
             <li key={doc.id} className="card">
               <div>
                 <Link to={`/documentos/${doc.id}`} className="doc-title">{doc.titulo}</Link>
-                <p className="muted small">Modificado: {formatDate(doc.fechaModificacion)}</p>
+                <p className="muted small">
+                  {doc.tema && `${doc.tema} · `}Modificado: {formatDate(doc.fechaModificacion)}
+                </p>
               </div>
               <div className="actions">
                 <Link to={`/documentos/${doc.id}/editar`} className="button secondary">Editar</Link>

@@ -1,16 +1,30 @@
 import { useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createBlock, getBlocks } from '../documentBlocks.js'
+import { createBlock, getBlocks, validateBlocks } from '../documentBlocks.js'
+import { TEMAS } from '../config.js'
+import { getHerramientas, getTema } from '../examSettings.js'
 import DocumentBlock from './DocumentBlock.jsx'
 import BlockTypeSelector from './BlockTypeSelector.jsx'
+import TopicSelector from './TopicSelector.jsx'
+import AllowedToolsSelector from './AllowedToolsSelector.jsx'
 
 function hasContent(block) {
-  return block.tipo === 'geogebra' || Boolean(block.contenido?.trim())
+  return (
+    block.tipo === 'geogebra' ||
+    Boolean(block.consigna.trim() || block.contenido?.trim()) ||
+    Boolean(block.opciones?.some((opcion) => opcion.texto.trim()))
+  )
 }
 
 export default function DocumentForm({ initialValues, onSubmit, submitLabel, cancelTo }) {
   const formId = useId()
   const [titulo, setTitulo] = useState(initialValues?.titulo ?? '')
+  // Si el documento tiene un tema que ya no está en la lista, hay que elegir uno de nuevo.
+  const [tema, setTema] = useState(() => {
+    const saved = getTema(initialValues)
+    return TEMAS.includes(saved) ? saved : ''
+  })
+  const [herramientas, setHerramientas] = useState(() => getHerramientas(initialValues))
   const [bloques, setBloques] = useState(() => {
     const existing = initialValues ? getBlocks(initialValues) : []
     return existing.length > 0 ? existing : [createBlock('texto')]
@@ -44,12 +58,21 @@ export default function DocumentForm({ initialValues, onSubmit, submitLabel, can
       setError('El título es obligatorio.')
       return
     }
+    if (!tema) {
+      setError('Elegí un tema.')
+      return
+    }
+    const blocksError = validateBlocks(bloques)
+    if (blocksError) {
+      setError(blocksError)
+      return
+    }
     const saved = bloques.map((block) => {
       const api = geogebraApis.current.get(block.id)
       return api ? { ...block, ggbBase64: api.getBase64() } : block
     })
     try {
-      onSubmit({ titulo: titulo.trim(), bloques: saved })
+      onSubmit({ titulo: titulo.trim(), tema, herramientas, bloques: saved })
     } catch {
       setError('No se pudo guardar: el almacenamiento del navegador está lleno.')
     }
@@ -63,10 +86,12 @@ export default function DocumentForm({ initialValues, onSubmit, submitLabel, can
           Título
           <input value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
         </label>
+        <TopicSelector value={tema} onChange={setTema} />
+        <AllowedToolsSelector value={herramientas} onChange={setHerramientas} />
       </form>
 
       <div className="blocks">
-        <span className="blocks-label">Contenido</span>
+        <span className="blocks-label">Consignas</span>
         {bloques.map((block, index) => (
           <DocumentBlock
             key={block.id}

@@ -29,11 +29,13 @@ export function getDocument(id) {
   return readAll().find((doc) => doc.id === id) || null
 }
 
-export function createDocument({ titulo, bloques }) {
+export function createDocument({ titulo, tema, herramientas, bloques }) {
   const ahora = new Date().toISOString()
   const doc = {
     id: crypto.randomUUID(),
     titulo,
+    tema,
+    herramientas,
     contenido: textFromBlocks(bloques),
     bloques,
     fechaCreacion: ahora,
@@ -43,11 +45,19 @@ export function createDocument({ titulo, bloques }) {
   return doc
 }
 
-export function updateDocument(id, { titulo, bloques }) {
+export function updateDocument(id, { titulo, tema, herramientas, bloques }) {
   let updated = null
   const documents = readAll().map((doc) => {
     if (doc.id !== id) return doc
-    updated = { ...doc, titulo, contenido: textFromBlocks(bloques), bloques, fechaModificacion: new Date().toISOString() }
+    updated = {
+      ...doc,
+      titulo,
+      tema,
+      herramientas,
+      contenido: textFromBlocks(bloques),
+      bloques,
+      fechaModificacion: new Date().toISOString(),
+    }
     return updated
   })
   writeAll(documents)

@@ -1,32 +1,38 @@
 import { BLOCK_TYPES } from '../documentBlocks.js'
-import TextBlock from './TextBlock.jsx'
+import PromptField from './PromptField.jsx'
 import CodeBlock from './CodeBlock.jsx'
+import MultipleChoiceBlock from './MultipleChoiceBlock.jsx'
+import TextBlock from './TextBlock.jsx'
 import GeoGebraApplet from './GeoGebraApplet.jsx'
 
-// Un apartado en modo edición: tipo, contenido y controles para moverlo o eliminarlo.
+// Un apartado en modo edición: tipo y controles arriba, consigna, y la configuración propia del tipo.
 export default function DocumentBlock({ block, index, total, onChange, onMove, onRemove, onGeoGebraReady }) {
   const label = BLOCK_TYPES[block.tipo]
-  const position = `${label} (apartado ${index + 1})`
 
   return (
-    <section className="card block" aria-label={position}>
-      <span className="block-type">{label}</span>
+    <section className="card block" aria-label={`${label} (apartado ${index + 1})`}>
+      <div className="block-header">
+        <span className="block-type">{index + 1}. {label}</span>
+        <div className="block-controls">
+          <button type="button" className="icon-button" onClick={() => onMove(-1)} disabled={index === 0}
+            aria-label="Subir" title="Subir">↑</button>
+          <button type="button" className="icon-button" onClick={() => onMove(1)} disabled={index === total - 1}
+            aria-label="Bajar" title="Bajar">↓</button>
+          <button type="button" className="icon-button danger" onClick={onRemove}>Eliminar</button>
+        </div>
+      </div>
 
-      {block.tipo === 'texto' && <TextBlock block={block} onChange={onChange} label={position} />}
+      <PromptField
+        value={block.consigna}
+        onChange={(consigna) => onChange({ consigna })}
+      />
+
+      {block.tipo === 'texto' && <TextBlock block={block} onChange={onChange} />}
       {block.tipo === 'codigo' && <CodeBlock block={block} onChange={onChange} />}
+      {block.tipo === 'opcion-multiple' && <MultipleChoiceBlock block={block} onChange={onChange} />}
       {block.tipo === 'geogebra' && (
         <GeoGebraApplet initialBase64={block.ggbBase64} onReady={onGeoGebraReady} />
       )}
-
-      <div className="actions block-actions">
-        <button type="button" className="secondary" onClick={() => onMove(-1)} disabled={index === 0}>
-          ↑ Subir
-        </button>
-        <button type="button" className="secondary" onClick={() => onMove(1)} disabled={index === total - 1}>
-          ↓ Bajar
-        </button>
-        <button type="button" className="danger" onClick={onRemove}>Eliminar</button>
-      </div>
     </section>
   )
 }
