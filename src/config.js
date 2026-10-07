@@ -2,9 +2,16 @@
 // No es seguro: todo el código del frontend es visible para cualquiera.
 // Se reemplazará por autenticación real cuando haya backend.
 export const PROFESORES = [
-  { username: 'profesor1', password: 'rendix123', nombre: 'Profesor Demo 1' },
-  { username: 'profesor2', password: 'rendix123', nombre: 'Profesor Demo 2' },
-  { username: 'profesor3', password: 'rendix123', nombre: 'Profesor Demo 3' },
+  { username: 'profesor1', password: 'rendix123', nombre: 'Profesor Demo 1', rol: 'profesor' },
+  { username: 'profesor2', password: 'rendix123', nombre: 'Profesor Demo 2', rol: 'profesor' },
+  { username: 'profesor3', password: 'rendix123', nombre: 'Profesor Demo 3', rol: 'profesor' },
+]
+
+// Cada alumno ve los parciales publicados por su profesor (relación fija por ahora).
+export const ALUMNOS = [
+  { username: 'alumno1', password: 'rendix123', nombre: 'Alumno Demo 1', rol: 'alumno', profesor: 'profesor1' },
+  { username: 'alumno2', password: 'rendix123', nombre: 'Alumno Demo 2', rol: 'alumno', profesor: 'profesor2' },
+  { username: 'alumno3', password: 'rendix123', nombre: 'Alumno Demo 3', rol: 'alumno', profesor: 'profesor3' },
 ]
 
 // Temas de examen disponibles. Para agregar o quitar temas, editar esta lista.

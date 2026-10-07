@@ -1,9 +1,10 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { getSession, logout } from '../auth.js'
+import { getRole, getSession, homePath, logout } from '../auth.js'
 
 export default function Layout() {
   const navigate = useNavigate()
   const session = getSession()
+  const esAlumno = getRole(session) === 'alumno'
 
   function handleLogout() {
     logout()
@@ -13,9 +14,9 @@ export default function Layout() {
   return (
     <>
       <header className="header">
-        <Link to="/" className="brand">Rendix</Link>
+        <Link to={homePath(session)} className="brand">Rendix</Link>
         <nav>
-          <Link to="/documentos">Documentos</Link>
+          <Link to={esAlumno ? '/alumno' : '/documentos'}>Parciales</Link>
         </nav>
         <div className="header-user">
           <span>{session?.nombre}</span>

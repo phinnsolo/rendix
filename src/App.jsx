@@ -7,6 +7,7 @@ import DocumentListPage from './pages/DocumentListPage.jsx'
 import DocumentCreatePage from './pages/DocumentCreatePage.jsx'
 import DocumentDetailPage from './pages/DocumentDetailPage.jsx'
 import DocumentEditPage from './pages/DocumentEditPage.jsx'
+import StudentExamListPage from './pages/StudentExamListPage.jsx'
 
 export default function App() {
   return (
@@ -14,7 +15,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route
         element={
-          <ProtectedRoute>
+          <ProtectedRoute role="profesor">
             <Layout />
           </ProtectedRoute>
         }
@@ -24,6 +25,15 @@ export default function App() {
         <Route path="/documentos/nuevo" element={<DocumentCreatePage />} />
         <Route path="/documentos/:id" element={<DocumentDetailPage />} />
         <Route path="/documentos/:id/editar" element={<DocumentEditPage />} />
+      </Route>
+      <Route
+        element={
+          <ProtectedRoute role="alumno">
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/alumno" element={<StudentExamListPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

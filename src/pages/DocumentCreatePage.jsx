@@ -12,7 +12,7 @@ export default function DocumentCreatePage() {
 
   return (
     <>
-      <h1>Nuevo documento</h1>
+      <h1>Nuevo parcial</h1>
       <DocumentForm onSubmit={handleSubmit} submitLabel="Crear" cancelTo="/documentos" />
     </>
   )

@@ -17,7 +17,7 @@ export default function DocumentEditPage() {
 
   return (
     <>
-      <h1>Editar documento</h1>
+      <h1>Editar parcial</h1>
       <DocumentForm
         initialValues={doc}
         onSubmit={handleSubmit}

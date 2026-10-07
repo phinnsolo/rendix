@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { isLoggedIn, login } from '../auth.js'
+import { homePath, isLoggedIn, login } from '../auth.js'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -9,13 +9,14 @@ export default function LoginPage() {
   const [error, setError] = useState('')
 
   if (isLoggedIn()) {
-    return <Navigate to="/" replace />
+    return <Navigate to={homePath()} replace />
   }
 
   function handleSubmit(event) {
     event.preventDefault()
-    if (login(username.trim(), password)) {
-      navigate('/', { replace: true })
+    const session = login(username.trim(), password)
+    if (session) {
+      navigate(homePath(session), { replace: true })
     } else {
       setError('Usuario o contraseña incorrectos.')
     }

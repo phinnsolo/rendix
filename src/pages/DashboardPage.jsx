@@ -1,20 +1,23 @@
 import { Link } from 'react-router-dom'
 import { getSession } from '../auth.js'
-import { getDocuments } from '../documentsStore.js'
+import { getDocuments, isPublished } from '../documentsStore.js'
 
 export default function DashboardPage() {
   const session = getSession()
-  const total = getDocuments().length
+  const documents = getDocuments()
+  const publicados = documents.filter(isPublished).length
+  const creados = documents.length - publicados
 
   return (
     <>
       <h1>Hola, {session?.nombre}</h1>
       <div className="card">
-        <h2>Documentos</h2>
+        <h2>Parciales</h2>
         <p className="muted">
-          {total === 1 ? '1 documento guardado.' : `${total} documentos guardados.`}
+          {creados === 1 ? '1 sin publicar' : `${creados} sin publicar`} ·{' '}
+          {publicados === 1 ? '1 publicado.' : `${publicados} publicados.`}
         </p>
-        <Link to="/documentos" className="button">Ir a documentos</Link>
+        <Link to="/documentos" className="button">Ir a parciales</Link>
       </div>
     </>
   )

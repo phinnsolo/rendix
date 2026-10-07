@@ -82,6 +82,14 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 .login h1 { margin: 0; }
 .login .muted { margin: 0; }
 
+/* Pestañas de parciales y vista del alumno */
+.tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+.tab { background: none; color: var(--muted); border: none; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; font-weight: 600; }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.doc-list li.student-exam { flex-direction: column; align-items: stretch; gap: 0.35rem; }
+.student-exam .small { margin: 0; }
+.student-exam-main { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+
 /* Apartados del documento */
 .blocks { display: flex; flex-direction: column; gap: 0.6rem; }
 .blocks-label { font-weight: 600; }
@@ -125,7 +133,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .block-answer-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 .mc-answer { display: flex; flex-direction: column; gap: 0.4rem; }
 .chip { font-size: 0.78rem; font-weight: 600; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); }
-.chip.correct { color: #1f7a3d; border-color: #9fd3b0; background: #eefaf1; }
+.chip.correct, .chip.published { color: #1f7a3d; border-color: #9fd3b0; background: #eefaf1; }
 
 .exam-header { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.75rem 0; padding: 0.65rem 0.9rem; }
 .exam-header-main { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem 1rem; flex-wrap: wrap; }

@@ -25,19 +25,23 @@ Abrir http://localhost:5173
 
 ## Credenciales de prueba
 
-| Usuario | Contraseña | Nombre |
-|---|---|---|
-| `profesor1` | `rendix123` | Profesor Demo 1 |
-| `profesor2` | `rendix123` | Profesor Demo 2 |
-| `profesor3` | `rendix123` | Profesor Demo 3 |
+| Usuario | Contraseña | Nombre | Rol |
+|---|---|---|---|
+| `profesor1` | `rendix123` | Profesor Demo 1 | profesor |
+| `profesor2` | `rendix123` | Profesor Demo 2 | profesor |
+| `profesor3` | `rendix123` | Profesor Demo 3 | profesor |
+| `alumno1` | `rendix123` | Alumno Demo 1 | alumno de `profesor1` |
+| `alumno2` | `rendix123` | Alumno Demo 2 | alumno de `profesor2` |
+| `alumno3` | `rendix123` | Alumno Demo 3 | alumno de `profesor3` |
 
 Son credenciales fijas definidas en `src/config.js`. Es una solución **temporal** y no segura.
 
 ## Alcance actual
 
-- Login de profesor (sin registro ni recuperación de contraseña).
-- Documentos: crear, listar, ver, editar y eliminar (título, contenido, fechas).
-- Los datos se guardan en el `localStorage` del navegador: cada navegador tiene sus propios documentos, y se pierden si se borran los datos del sitio. No hay base de datos todavía (próximamente: PostgreSQL con Neon).
+- Login de profesor y de alumno (sin registro ni recuperación de contraseña). Cada rol solo puede entrar a sus pantallas.
+- Parciales del profesor: crear, listar, ver, editar y eliminar, separados en las pestañas **Creados** y **Publicados**. Desde Creados se puede **publicar** un parcial.
+- Vista del alumno: lista de los parciales publicados por su profesor (todavía no se pueden rendir).
+- Los datos se guardan en el `localStorage` del navegador: cada navegador tiene sus propios parciales, y se pierden si se borran los datos del sitio. No hay base de datos todavía (próximamente: PostgreSQL con Neon). Como no hay backend, el alumno solo ve parciales publicados **en el mismo navegador** donde el profesor los publicó.
 
 ## Build / deploy
 
