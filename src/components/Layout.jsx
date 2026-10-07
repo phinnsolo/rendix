@@ -2,6 +2,7 @@ import { useEffect, useReducer } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { getRole, getSession, homePath, logout } from '../auth.js'
 import { CORRECCION_EVENT, getAllSubmissions, isGraded } from '../submissionsStore.js'
+import icon from '../assets/rendix-icon.png'
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -23,7 +24,10 @@ export default function Layout() {
   return (
     <>
       <header className="header">
-        <Link to={homePath(session)} className="brand">Rendix</Link>
+        <Link to={homePath(session)} className="brand">
+          <img src={icon} alt="" className="brand-icon" />
+          Rendix
+        </Link>
         <nav>
           <NavLink to={esAlumno ? '/alumno' : '/documentos'}>Parciales</NavLink>
           {!esAlumno && (

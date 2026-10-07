@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { homePath, isLoggedIn, login } from '../auth.js'
+import logo from '../assets/rendix-logo.png'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -25,8 +26,10 @@ export default function LoginPage() {
   return (
     <main className="login">
       <form className="form card" onSubmit={handleSubmit}>
-        <h1>Rendix</h1>
-        <p className="muted">Iniciar sesión</p>
+        <div className="login-header">
+          <h1><img src={logo} alt="Rendix" className="login-logo" /></h1>
+          <p className="muted">Iniciar sesión</p>
+        </div>
         <label>
           Usuario
           <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />

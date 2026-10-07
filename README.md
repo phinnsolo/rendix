@@ -44,7 +44,8 @@ Son credenciales fijas definidas en `src/config.js`. Es una solución **temporal
 - Vista del alumno: lista de los parciales publicados por su profesor. El alumno abre un parcial, toca **Comenzar parcial** (desde ahí corre el tiempo restante, que no se reinicia al recargar), lo responde y lo **envía una sola vez**. Si se termina el tiempo, se envía solo. Después solo puede ver su entrega.
 - El profesor puede publicar un parcial desde la lista (pestaña Creados) o desde el detalle, apenas lo crea.
 - Herramientas: mientras resuelve, el alumno abre desde pestañas a la izquierda las herramientas que habilitó el profesor (calculadora científica y GeoGebra), en una ventanita flotante.
-- Entregas: en el detalle de cada parcial publicado y en la sección **Entregas** (pestañas Sin corregir / Corregidas) el profesor ve las respuestas del alumno, cuándo empezó, cuándo entregó y si se envió por tiempo, y la corrige con una nota (0 a 10) y una devolución. Por ahora el alumno no ve la nota.
+- Entregas: en el detalle de cada parcial publicado y en la sección **Entregas** (pestañas Sin corregir / Corregidas) el profesor ve las respuestas del alumno, cuándo empezó, cuándo entregó y si se envió por tiempo, y la corrige con una nota (0 a 10) y una devolución.
+- El alumno tiene sus parciales separados en **A entregar** y **Entregados**; al abrir un parcial entregado ve la nota y la devolución del profesor.
 - Los datos se guardan en el `localStorage` del navegador: cada navegador tiene sus propios parciales, y se pierden si se borran los datos del sitio. No hay base de datos todavía (próximamente: PostgreSQL con Neon). Como no hay backend, profesor y alumno tienen que usar **el mismo navegador** para ver publicaciones y entregas del otro.
 
 ## Build / deploy
