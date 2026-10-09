@@ -5,14 +5,8 @@ import { getPublishedDocumentOf } from '../documentsStore.js'
 import { emptyAnswer, getBlocks } from '../documentBlocks.js'
 import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { formatDate } from '../formatDate.js'
-import {
-  getDraftAnswers,
-  getExamStart,
-  getSubmissionOf,
-  saveDraftAnswers,
-  startExam,
-  submitExam,
-} from '../submissionsStore.js'
+import { getDraftAnswers, getSubmissionOf, saveDraftAnswers, submitExam } from '../submissionsStore.js'
+import { estadoTurno, formatHorario, getApertura, getTurnoDeAlumno, registrarApertura, turnoFin, turnoInicio } from '../turnosStore.js'
 import ExamBlocks from '../components/ExamBlocks.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import ExamToolsPanel from '../components/ExamToolsPanel.jsx'
@@ -31,22 +25,34 @@ function isUnanswered(block, value) {
   return false
 }
 
-// El parcial pasa por tres estados: sin empezar → resolviendo (con reloj) → entregado.
+// Solo se puede abrir si el alumno está asignado a un turno de este parcial, y dentro de su horario.
+// Después pasa por: sin abrir → resolviendo (con reloj) → entregado.
 export default function StudentExamPage() {
   const { id } = useParams()
   const session = getSession()
-  const doc = getPublishedDocumentOf(session.profesor, id)
-  const [entrega, setEntrega] = useState(() => getSubmissionOf(session.profesor, id, session.username))
-  const [inicio, setInicio] = useState(() => getExamStart(id))
+  const [turno] = useState(() => getTurnoDeAlumno(session.username, id))
+  const doc = turno ? getPublishedDocumentOf(turno.profesor, id) : null
+  const [entrega, setEntrega] = useState(() => (turno ? getSubmissionOf(turno.profesor, id, session.username) : null))
+  const [inicio, setInicio] = useState(() => getApertura(turno, session.username))
+  // Mientras espera el inicio del turno, la página se actualiza sola para habilitar el botón.
+  const estado = turno ? estadoTurno(turno) : null
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (estado !== 'proximo') return
+    const timer = setInterval(() => tick((n) => n + 1), 1000)
+    return () => clearInterval(timer)
+  }, [estado])
 
-  if (!entrega && !doc) {
+  if (!turno || (!entrega && !doc)) {
     return <NotFound backTo="/alumno" backLabel="Volver a parciales" />
   }
 
   let content
   if (entrega) content = <SubmittedExam entrega={entrega} />
-  else if (!inicio) content = <ExamIntro doc={doc} onStart={() => setInicio(startExam(doc.id))} />
-  else content = <ExamInProgress doc={doc} inicio={inicio} onSubmitted={setEntrega} />
+  else if (inicio) content = <ExamInProgress doc={doc} turno={turno} inicio={inicio} onSubmitted={setEntrega} />
+  else if (estado === 'en-curso') {
+    content = <ExamIntro doc={doc} turno={turno} onStart={() => setInicio(registrarApertura(turno, session.username))} />
+  } else content = <ExamUnavailable doc={doc} turno={turno} estado={estado} />
 
   return (
     <>
@@ -56,11 +62,35 @@ export default function StudentExamPage() {
   )
 }
 
-function ExamIntro({ doc, onStart }) {
+// Fuera del horario del turno: se muestra el motivo y no se puede abrir.
+function ExamUnavailable({ doc, turno, estado }) {
+  const motivo = estado === 'proximo'
+    ? `El turno "${turno.nombre}" empieza el ${turnoInicio(turno).toLocaleDateString('es-AR')} a las ${turno.horaInicio}. Vas a poder abrir el parcial a partir de ese momento.`
+    : `El turno "${turno.nombre}" terminó el ${turnoFin(turno).toLocaleDateString('es-AR')} a las ${turno.horaFin}. Ya no se puede abrir el parcial.`
+
+  return (
+    <>
+      <h1>{doc.titulo}</h1>
+      <div className="card exam-wait">
+        <span className={estado === 'proximo' ? 'chip' : 'chip incorrect'}>
+          {estado === 'proximo' ? 'Todavía no empezó' : 'Turno finalizado'}
+        </span>
+        <p>{motivo}</p>
+        <p className="muted small">Horario del turno: {formatHorario(turno)}</p>
+      </div>
+    </>
+  )
+}
+
+function ExamIntro({ doc, turno, onStart }) {
   const duracion = getDuracion(doc)
   const apartados = getBlocks(doc).length
 
   function handleStart() {
+    if (estadoTurno(turno) !== 'en-curso') {
+      window.alert('El turno ya no está en curso: no se puede abrir el parcial.')
+      return
+    }
     const mensaje = duracion == null
       ? '¿Comenzar el parcial?'
       : `Tenés ${duracion} minutos. El tiempo empieza a correr y no se puede pausar. ¿Comenzar?`
@@ -76,7 +106,8 @@ function ExamIntro({ doc, onStart }) {
           {apartados === 1 ? 'El parcial tiene 1 apartado.' : `El parcial tiene ${apartados} apartados.`}{' '}
           {duracion == null
             ? 'No tiene límite de tiempo.'
-            : `Vas a tener ${duracion} minutos desde que lo comiences; al terminar el tiempo se envía automáticamente.`}
+            : `Vas a tener ${duracion} minutos desde que lo comiences; al terminar el tiempo se envía automáticamente.`}{' '}
+          El turno termina a las {turno.horaFin}: a esa hora se envía lo que hayas respondido.
         </p>
         <p className="muted small">Una vez enviado no se puede modificar.</p>
         <div className="actions">
@@ -87,7 +118,7 @@ function ExamIntro({ doc, onStart }) {
   )
 }
 
-function ExamInProgress({ doc, inicio, onSubmitted }) {
+function ExamInProgress({ doc, turno, inicio, onSubmitted }) {
   const [blocks] = useState(() => getBlocks(doc))
   const [respuestas, setRespuestas] = useState(() => initialAnswers(blocks, doc.id))
   const [error, setError] = useState('')
@@ -95,15 +126,16 @@ function ExamInProgress({ doc, inicio, onSubmitted }) {
   const enviado = useRef(false)
 
   const duracion = getDuracion(doc)
-  const deadline = duracion == null ? null : Date.parse(inicio) + duracion * 60_000
+  // El tiempo termina con la duración del parcial o con el fin del turno, lo que llegue antes.
+  const finTurno = turnoFin(turno).getTime()
+  const deadline = duracion == null ? finTurno : Math.min(Date.parse(inicio) + duracion * 60_000, finTurno)
   const [ahora, setAhora] = useState(Date.now)
-  const segundosRestantes = deadline == null ? null : Math.max(0, Math.ceil((deadline - ahora) / 1000))
+  const segundosRestantes = Math.max(0, Math.ceil((deadline - ahora) / 1000))
 
   useEffect(() => {
-    if (deadline == null) return
     const timer = setInterval(() => setAhora(Date.now()), 1000)
     return () => clearInterval(timer)
-  }, [deadline])
+  }, [])
 
   // El progreso se guarda en cada cambio para no perderlo al recargar. GeoGebra se lee recién al enviar.
   useEffect(() => {
@@ -118,7 +150,7 @@ function ExamInProgress({ doc, inicio, onSubmitted }) {
     const finales = { ...respuestas }
     for (const [blockId, api] of geogebraApis.current) finales[blockId] = api.getBase64()
     try {
-      const entrega = submitExam(doc, finales, { automatico })
+      const entrega = submitExam({ ...doc, profesor: turno.profesor }, finales, { automatico, fechaInicio: inicio })
       enviado.current = true
       onSubmitted(entrega)
       window.scrollTo(0, 0)

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { deleteDocument, getDocuments, isPublished, publishDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
+import { avisoBorrado } from '../deleteNotice.js'
 
 const TABS = {
   creados: { label: 'Creados', vacio: 'No hay parciales sin publicar.' },
@@ -17,16 +18,14 @@ export default function DocumentListPage() {
   const visibles = documents.filter((doc) => isPublished(doc) === (tab === 'publicados'))
 
   function handleDelete(doc) {
-    const entregas = getSubmissionsFor(doc.id).length
-    const aviso = entregas > 0 ? ` También se borran sus ${entregasLabel(entregas)}.` : ''
-    if (window.confirm(`¿Eliminar "${doc.titulo}"?${aviso}`)) {
+    if (window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) {
       deleteDocument(doc.id)
       setDocuments(getDocuments())
     }
   }
 
   function handlePublish(doc) {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos van a poder verlo.`)) {
+    if (window.confirm(`¿Publicar "${doc.titulo}"? Después vas a poder crear turnos para que lo rindan.`)) {
       publishDocument(doc.id)
       setDocuments(getDocuments())
     }

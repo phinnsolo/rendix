@@ -5,6 +5,7 @@
 import { getSession } from './auth.js'
 import { textFromBlocks } from './documentBlocks.js'
 import { deleteSubmissionsFor } from './submissionsStore.js'
+import { deleteTurnosFor } from './turnosStore.js'
 
 export const ESTADOS = { borrador: 'borrador', publicado: 'publicado' }
 
@@ -105,4 +106,5 @@ export function publishDocument(id) {
 export function deleteDocument(id) {
   writeAll(readAll().filter((doc) => doc.id !== id))
   deleteSubmissionsFor(id)
+  deleteTurnosFor(id)
 }

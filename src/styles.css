@@ -243,3 +243,25 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   .tools-window { left: 0.5rem; right: 0.5rem; top: auto; bottom: 5rem; transform: none; width: auto; max-height: 70vh; }
   .tools-window-calculadora, .tools-window-geogebra { width: auto; }
 }
+
+/* Turnos */
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
+.field-error { color: var(--danger); font-size: 0.85rem; font-weight: 400; }
+[aria-invalid='true'] { border-color: var(--danger); }
+.assign { display: flex; flex-direction: column; gap: 0.6rem; margin: 1rem 0; }
+.assign h2 { margin: 0; }
+.assign-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.35rem; max-height: 16rem; overflow-y: auto; }
+.assign-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.tracking-header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.tracking-header h2 { margin: 0; }
+.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.tracking-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.tracking-table th, .tracking-table td { padding: 0.55rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.tracking-table th { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; background: var(--bg); }
+.tracking-table tbody tr:last-child td { border-bottom: none; }
+.table-sub { display: block; margin: 0; }
+.table-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
+.table-actions .button, .table-actions button { padding: 0.3rem 0.65rem; font-size: 0.85rem; }
+.exam-wait { margin: 0.75rem 0; }
+.exam-turno { margin: 0.3rem 0 0; font-weight: 600; font-size: 0.92rem; }

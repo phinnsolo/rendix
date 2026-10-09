@@ -27,32 +27,18 @@ function draftKey(parcialId) {
   return `rendix_respuestas_${getSession().username}_${parcialId}`
 }
 
-function startKey(parcialId) {
-  return `rendix_inicio_${getSession().username}_${parcialId}`
-}
-
 // --- Alumno
 
 export function getSubmissionOf(profesor, parcialId, alumno) {
   return readAll(profesor).find((e) => e.parcialId === parcialId && e.alumno === alumno) || null
 }
 
-// Momento en que el alumno tocó "Comenzar parcial" (ISO), o null si todavía no empezó.
-export function getExamStart(parcialId) {
-  return localStorage.getItem(startKey(parcialId))
-}
-
-export function startExam(parcialId) {
-  const inicio = new Date().toISOString()
-  localStorage.setItem(startKey(parcialId), inicio)
-  return inicio
-}
-
 // Guarda la entrega con una copia del parcial: si el profesor lo edita después, la entrega no cambia.
 // Cada alumno entrega una sola vez. `automatico` indica que se envió porque se terminó el tiempo.
-export function submitExam(doc, respuestas, { automatico = false } = {}) {
+// `fechaInicio` es la apertura registrada en el turno.
+export function submitExam(doc, respuestas, { automatico = false, fechaInicio = null } = {}) {
   const session = getSession()
-  const profesor = session.profesor
+  const profesor = doc.profesor
   if (getSubmissionOf(profesor, doc.id, session.username)) {
     throw new Error('Este parcial ya fue entregado.')
   }
@@ -68,13 +54,12 @@ export function submitExam(doc, respuestas, { automatico = false } = {}) {
     duracion: getDuracion(doc),
     bloques: getBlocks(doc),
     respuestas,
-    fechaInicio: getExamStart(doc.id),
+    fechaInicio,
     fechaEntrega: new Date().toISOString(),
     enviadoPorTiempo: automatico,
   }
   writeAll(profesor, [...readAll(profesor), entrega])
   localStorage.removeItem(draftKey(doc.id))
-  localStorage.removeItem(startKey(doc.id))
   return entrega
 }
 

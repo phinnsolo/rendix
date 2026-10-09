@@ -30,6 +30,7 @@ export default function Layout() {
         </Link>
         <nav>
           <NavLink to={esAlumno ? '/alumno' : '/documentos'}>Parciales</NavLink>
+          {!esAlumno && <NavLink to="/turnos">Turnos</NavLink>}
           {!esAlumno && (
             <NavLink to="/entregas">
               Entregas{sinCorregir > 0 && <span className="nav-badge" aria-label={`${sinCorregir} sin corregir`}>{sinCorregir}</span>}

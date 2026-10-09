@@ -30,9 +30,7 @@ Abrir http://localhost:5173
 | `profesor1` | `rendix123` | Profesor Demo 1 | profesor |
 | `profesor2` | `rendix123` | Profesor Demo 2 | profesor |
 | `profesor3` | `rendix123` | Profesor Demo 3 | profesor |
-| `alumno1` | `rendix123` | Alumno Demo 1 | alumno de `profesor1` |
-| `alumno2` | `rendix123` | Alumno Demo 2 | alumno de `profesor2` |
-| `alumno3` | `rendix123` | Alumno Demo 3 | alumno de `profesor3` |
+| `alumno1` … `alumno10` | `rendix123` | Alumno Demo 1 … 10 | alumno |
 
 Son credenciales fijas definidas en `src/config.js`. Es una solución **temporal** y no segura.
 
@@ -41,12 +39,13 @@ Son credenciales fijas definidas en `src/config.js`. Es una solución **temporal
 - Login de profesor y de alumno (sin registro ni recuperación de contraseña). Cada rol solo puede entrar a sus pantallas.
 - Parciales del profesor: crear, listar, ver, editar y eliminar, separados en las pestañas **Creados** y **Publicados**. Desde Creados se puede **publicar** un parcial.
 - Duración: al crear un parcial el profesor elige cuántos minutos tiene el alumno (máximo 120). Los parciales anteriores quedan sin límite de tiempo.
-- Vista del alumno: lista de los parciales publicados por su profesor. El alumno abre un parcial, toca **Comenzar parcial** (desde ahí corre el tiempo restante, que no se reinicia al recargar), lo responde y lo **envía una sola vez**. Si se termina el tiempo, se envía solo. Después solo puede ver su entrega.
+- Turnos: el profesor crea turnos (nombre, examen publicado, fecha, hora de inicio y de fin), les asigna alumnos buscándolos por nombre y sigue en vivo quién **no abrió**, quién lo tiene **abierto**, quién lo **envió** y, al terminar el turno, quién **no completó**, con la hora de apertura y de envío de cada uno. Un turno se puede editar, eliminar o quitarle alumnos solo antes de que empiece.
+- Vista del alumno: lista de los parciales de los turnos a los que fue asignado, con la fecha y el horario. Solo puede abrir el parcial dentro del horario del turno. El alumno abre un parcial, toca **Comenzar parcial** (se registra la apertura y corre el tiempo restante, que no se reinicia al recargar ni pasa del fin del turno), lo responde y lo **envía una sola vez**. Si se termina el tiempo, se envía solo. Después solo puede ver su entrega.
 - El profesor puede publicar un parcial desde la lista (pestaña Creados) o desde el detalle, apenas lo crea.
 - Herramientas: mientras resuelve, el alumno abre desde pestañas a la izquierda las herramientas que habilitó el profesor (calculadora científica y GeoGebra), en una ventanita flotante.
 - Entregas: en el detalle de cada parcial publicado y en la sección **Entregas** (pestañas Sin corregir / Corregidas) el profesor ve las respuestas del alumno, cuándo empezó, cuándo entregó y si se envió por tiempo, y la corrige con una nota (0 a 10) y una devolución.
 - El alumno tiene sus parciales separados en **A entregar** y **Entregados**; al abrir un parcial entregado ve la nota y la devolución del profesor.
-- Los datos se guardan en el `localStorage` del navegador: cada navegador tiene sus propios parciales, y se pierden si se borran los datos del sitio. No hay base de datos todavía (próximamente: PostgreSQL con Neon). Como no hay backend, profesor y alumno tienen que usar **el mismo navegador** para ver publicaciones y entregas del otro.
+- Los datos se guardan en el `localStorage` del navegador: cada navegador tiene sus propios parciales, y se pierden si se borran los datos del sitio. No hay base de datos todavía (próximamente: PostgreSQL con Neon). Como no hay backend, profesor y alumno tienen que usar **el mismo navegador** para ver publicaciones y entregas del otro. La sesión es **por pestaña**: se puede tener al profesor en una pestaña y a un alumno en otra para ver el seguimiento en vivo. Al abrir una pestaña nueva hay que volver a iniciar sesión.
 
 ## Build / deploy
 

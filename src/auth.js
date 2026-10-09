@@ -1,5 +1,7 @@
 import { ALUMNOS, PROFESORES } from './config.js'
 
+// La sesión vive en sessionStorage: cada pestaña tiene la suya, así se puede tener al profesor en una
+// y a un alumno en otra. Los datos (parciales, turnos, entregas) siguen en localStorage, compartidos.
 const SESSION_KEY = 'rendix_session'
 
 export function login(username, password) {
@@ -8,18 +10,17 @@ export function login(username, password) {
   )
   if (!usuario) return null
   const session = { username: usuario.username, nombre: usuario.nombre, rol: usuario.rol }
-  if (usuario.profesor) session.profesor = usuario.profesor
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
   return session
 }
 
 export function logout() {
-  localStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(SESSION_KEY)
 }
 
 export function getSession() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY))
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY))
   } catch {
     return null
   }

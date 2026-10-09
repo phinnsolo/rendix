@@ -8,7 +8,9 @@ import ExamHeader from '../components/ExamHeader.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
 import { getBlocks } from '../documentBlocks.js'
 import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
-import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
+import { getSubmissionsFor } from '../submissionsStore.js'
+import { alumnosLabel, formatHorario, getTurnosFor } from '../turnosStore.js'
+import { avisoBorrado } from '../deleteNotice.js'
 
 export default function DocumentDetailPage() {
   const { id } = useParams()
@@ -23,17 +25,17 @@ export default function DocumentDetailPage() {
   const publicado = isPublished(doc)
   const listPath = publicado ? '/documentos?tab=publicados' : '/documentos'
   const entregas = getSubmissionsFor(doc.id)
+  const turnos = getTurnosFor(doc.id)
 
   function handleDelete() {
-    const aviso = entregas.length > 0 ? ` También se borran sus ${entregasLabel(entregas.length)}.` : ''
-    if (window.confirm(`¿Eliminar "${doc.titulo}"?${aviso}`)) {
+    if (window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) {
       deleteDocument(doc.id)
       navigate(listPath)
     }
   }
 
   function handlePublish() {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos van a poder verlo.`)) {
+    if (window.confirm(`¿Publicar "${doc.titulo}"? Después vas a poder crear turnos para que lo rindan.`)) {
       publishDocument(doc.id)
       setRecienPublicado(true)
       refresh()
@@ -53,7 +55,8 @@ export default function DocumentDetailPage() {
       </div>
       {recienPublicado && (
         <div className="card notice">
-          <span className="chip published">Publicado</span> Tus alumnos ya pueden ver y resolver este parcial.
+          <span className="chip published">Publicado</span> Creá un turno y asigná alumnos para que lo puedan rendir.{' '}
+          <Link to={`/turnos/nuevo?parcial=${doc.id}`}>Crear turno</Link>
         </div>
       )}
       <p className="muted small">
@@ -64,6 +67,25 @@ export default function DocumentDetailPage() {
 
       {publicado && (
         <section className="submissions">
+          <div className="tracking-header">
+            <h2>Turnos ({turnos.length})</h2>
+            <Link to={`/turnos/nuevo?parcial=${doc.id}`} className="button secondary">Crear turno</Link>
+          </div>
+          {turnos.length === 0 ? (
+            <p className="muted">Todavía no hay turnos: los alumnos no lo pueden rendir hasta que los asignes a uno.</p>
+          ) : (
+            <ul className="doc-list">
+              {turnos.map((turno) => (
+                <li key={turno.id} className="card">
+                  <div>
+                    <Link to={`/turnos/${turno.id}`} className="doc-title">{turno.nombre}</Link>
+                    <p className="muted small">{formatHorario(turno)} · {alumnosLabel(turno.alumnos.length)}</p>
+                  </div>
+                  <Link to={`/turnos/${turno.id}`} className="button secondary">Ver turno</Link>
+                </li>
+              ))}
+            </ul>
+          )}
           <h2>Entregas ({entregas.length})</h2>
           {entregas.length === 0 ? (
             <p className="muted">Todavía no hay entregas.</p>
@@ -97,7 +119,7 @@ export default function DocumentDetailPage() {
         <div className="card publish-bar">
           <div>
             <strong>¿Está listo?</strong>
-            <p className="muted small">Al publicarlo, tus alumnos van a poder verlo y resolverlo.</p>
+            <p className="muted small">Al publicarlo vas a poder crear turnos y asignarles alumnos.</p>
           </div>
           <button type="button" onClick={handlePublish}>Publicar parcial</button>
         </div>

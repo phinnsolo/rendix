@@ -7,12 +7,13 @@ export const PROFESORES = [
   { username: 'profesor3', password: 'rendix123', nombre: 'Profesor Demo 3', rol: 'profesor' },
 ]
 
-// Cada alumno ve los parciales publicados por su profesor (relación fija por ahora).
-export const ALUMNOS = [
-  { username: 'alumno1', password: 'rendix123', nombre: 'Alumno Demo 1', rol: 'alumno', profesor: 'profesor1' },
-  { username: 'alumno2', password: 'rendix123', nombre: 'Alumno Demo 2', rol: 'alumno', profesor: 'profesor2' },
-  { username: 'alumno3', password: 'rendix123', nombre: 'Alumno Demo 3', rol: 'alumno', profesor: 'profesor3' },
-]
+// Alumnos registrados. Qué parciales ve cada uno lo deciden los turnos a los que lo asigna un profesor.
+export const ALUMNOS = Array.from({ length: 10 }, (_, i) => ({
+  username: `alumno${i + 1}`,
+  password: 'rendix123',
+  nombre: `Alumno Demo ${i + 1}`,
+  rol: 'alumno',
+}))
 
 // Temas de examen disponibles. Para agregar o quitar temas, editar esta lista.
 export const TEMAS = ['Tema 1', 'Tema 2', 'Tema 3']

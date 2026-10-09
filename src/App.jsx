@@ -11,6 +11,10 @@ import StudentExamListPage from './pages/StudentExamListPage.jsx'
 import StudentExamPage from './pages/StudentExamPage.jsx'
 import SubmissionDetailPage from './pages/SubmissionDetailPage.jsx'
 import SubmissionsPage from './pages/SubmissionsPage.jsx'
+import TurnoCreatePage from './pages/TurnoCreatePage.jsx'
+import TurnoDetailPage from './pages/TurnoDetailPage.jsx'
+import TurnoEditPage from './pages/TurnoEditPage.jsx'
+import TurnoListPage from './pages/TurnoListPage.jsx'
 
 export default function App() {
   return (
@@ -30,6 +34,10 @@ export default function App() {
         <Route path="/documentos/:id/editar" element={<DocumentEditPage />} />
         <Route path="/documentos/:id/entregas/:entregaId" element={<SubmissionDetailPage />} />
         <Route path="/entregas" element={<SubmissionsPage />} />
+        <Route path="/turnos" element={<TurnoListPage />} />
+        <Route path="/turnos/nuevo" element={<TurnoCreatePage />} />
+        <Route path="/turnos/:id" element={<TurnoDetailPage />} />
+        <Route path="/turnos/:id/editar" element={<TurnoEditPage />} />
       </Route>
       <Route
         element={
