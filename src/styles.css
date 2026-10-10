@@ -27,7 +27,8 @@ a { color: var(--primary); }
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.header .brand { font-weight: 700; font-size: 1.2rem; text-decoration: none; color: var(--text); }
+.header .brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.2rem; letter-spacing: 0.04em; text-decoration: none; color: var(--text); }
+.brand-icon { height: 36px; width: auto; display: block; }
 .header nav a { text-decoration: none; }
 .header-user { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
 
@@ -81,6 +82,37 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 .login .card { width: 100%; max-width: 360px; }
 .login h1 { margin: 0; }
 .login .muted { margin: 0; }
+.login-header { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem; }
+.login-logo { display: block; height: 140px; width: auto; }
+
+/* Pestañas de parciales y vista del alumno */
+.tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+.tab { background: none; color: var(--muted); border: none; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; font-weight: 600; }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.doc-list li.student-exam { flex-direction: column; align-items: stretch; gap: 0.35rem; }
+.student-exam .small { margin: 0; }
+.student-exam-main { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.student-exam .actions { margin-top: 0.25rem; }
+.chip.pending { color: #8a5a00; border-color: #f0d28a; background: #fff8e6; }
+
+/* Resolución y entregas */
+.notice { margin: 0 0 0.75rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.exam-submit { align-items: center; margin-top: 1rem; }
+.exam-submit .small { margin: 0; }
+.submissions { margin: 1rem 0 0.5rem; }
+.submissions .doc-list { margin-bottom: 1.25rem; }
+.submissions > .muted { margin: 0 0 1.25rem; }
+.exam-start p { margin: 0 0 0.5rem; line-height: 1.5; }
+.exam-start .actions { margin-top: 0.75rem; }
+.exam-header.sticky { position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 6px rgb(0 0 0 / 0.06); }
+.exam-time strong { font-size: 1.15rem; }
+.exam-time.low { color: var(--danger); }
+.exam-tools-sep { margin: 0 0.15rem; }
+.mc-setup { list-style: none; margin: 0; padding: 0.5rem 0 0; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 0.35rem; }
+.mc-setup li { display: flex; align-items: center; gap: 0.5rem; }
+.mc-setup li::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; border: 1px solid var(--muted); flex-shrink: 0; }
+.block-section .block-answer-label { display: block; margin-bottom: 0.3rem; }
+.duration-input { max-width: 10rem; }
 
 /* Apartados del documento */
 .blocks { display: flex; flex-direction: column; gap: 0.6rem; }
@@ -125,7 +157,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .block-answer-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 .mc-answer { display: flex; flex-direction: column; gap: 0.4rem; }
 .chip { font-size: 0.78rem; font-weight: 600; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); }
-.chip.correct { color: #1f7a3d; border-color: #9fd3b0; background: #eefaf1; }
+.chip.correct, .chip.published { color: #1f7a3d; border-color: #9fd3b0; background: #eefaf1; }
 
 .exam-header { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.75rem 0; padding: 0.65rem 0.9rem; }
 .exam-header-main { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem 1rem; flex-wrap: wrap; }
@@ -140,6 +172,102 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .geogebra-applet { position: relative; height: 520px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .geogebra-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; padding: 1rem; text-align: center; }
 
+/* Publicar desde el detalle */
+.publish-bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; border-color: var(--primary); background: #f0f4fe; }
+.publish-bar .small { margin: 0.15rem 0 0; }
+
+/* Navegación y panel del profesor */
+.header nav { display: flex; gap: 1rem; }
+.header nav a.active { font-weight: 600; }
+.nav-badge { display: inline-block; min-width: 1.2rem; margin-left: 0.3rem; padding: 0 0.35rem; border-radius: 999px; background: var(--danger); color: #fff; font-size: 0.75rem; font-weight: 700; text-align: center; line-height: 1.2rem; }
+.dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; }
+.chips-line .chip { margin-right: 0.3rem; }
+.chip.incorrect { color: var(--danger); border-color: #f1b5b5; background: #fdf0f0; }
+
+/* Corrección vista por el alumno */
+.grade-card { margin: 0 0 0.75rem; border-color: #9fd3b0; }
+.grade-card.pending { border-color: var(--border); }
+.grade-card h2 { margin: 0; }
+.grade-card.pending p { margin: 0.35rem 0 0; }
+.grade-card-header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.grade-value { margin: 0.4rem 0 0; font-size: 1.1rem; }
+.grade-value strong { font-size: 2rem; color: #1f7a3d; }
+.grade-feedback { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--border); }
+
+/* Corrección */
+.grading { margin-top: 1rem; }
+.grading-header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.grading-header h2 { margin: 0; }
+.grade-input { max-width: 8rem; }
+.grading textarea { font-weight: 400; }
+.grading-actions { align-items: center; }
+.grading-actions .small { margin: 0; }
+
+/* Herramientas del alumno: pestañas a la izquierda y ventanitas flotantes */
+.tools-dock { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 20; }
+.tools-tabs { display: flex; flex-direction: column; gap: 0.35rem; }
+.tools-tab { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; width: 4.5rem; padding: 0.5rem 0.25rem; border-radius: 0 8px 8px 0; border-left: none; background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: 0 2px 6px rgb(0 0 0 / 0.08); font-size: 0.72rem; font-weight: 600; }
+.tools-tab span[aria-hidden] { font-size: 1.2rem; }
+.tools-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.tools-window { position: fixed; left: 5rem; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; max-height: calc(100vh - 2rem); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.18); overflow: hidden; }
+.tools-window[hidden] { display: none; }
+.tools-window-calculadora { width: 300px; }
+.tools-window-geogebra { width: min(640px, calc(100vw - 6rem)); }
+.tools-window-header { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0.6rem 0.45rem 0.85rem; border-bottom: 1px solid var(--border); background: var(--bg); }
+.tools-window-body { padding: 0.6rem; overflow: auto; }
+.tool-geogebra .geogebra-applet { height: min(480px, calc(100vh - 7rem)); }
+
+.calculator { display: flex; flex-direction: column; gap: 0.5rem; }
+.calculator-display { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.calculator-history { font-size: 0.8rem; text-align: right; min-height: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calculator-display input { border: none; background: none; padding: 0; text-align: right; font-size: 1.4rem; font-variant-numeric: tabular-nums; outline: none; }
+.calculator-status { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; min-height: 1.2rem; }
+.calculator-status .link-button { padding: 0; font-size: 0.75rem; }
+.calculator-keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; }
+.calc-key { padding: 0.5rem 0; font-size: 0.9rem; background: var(--bg); color: var(--text); border-color: var(--border); }
+.calc-key.digit { background: var(--surface); font-weight: 600; }
+.calc-key.equals { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 700; }
+.calc-key:active { filter: brightness(0.92); }
+
+@media (max-width: 1040px) {
+  .tools-tab { width: 2.75rem; }
+  .tools-tab-label { display: none; }
+  .tools-window { left: 3.25rem; }
+}
+
 @media (max-width: 600px) {
   .geogebra-applet { height: 460px; }
+  .tools-dock { top: auto; bottom: 0.75rem; transform: none; }
+  .tools-tabs { flex-direction: row; padding-left: 0.5rem; }
+  .tools-tab { border-radius: 8px; border-left: 1px solid var(--border); width: 4rem; }
+  .tools-window { left: 0.5rem; right: 0.5rem; top: auto; bottom: 5rem; transform: none; width: auto; max-height: 70vh; }
+  .tools-window-calculadora, .tools-window-geogebra { width: auto; }
 }
+
+/* Turnos */
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
+.field-error { color: var(--danger); font-size: 0.85rem; font-weight: 400; }
+[aria-invalid='true'] { border-color: var(--danger); }
+.assign { display: flex; flex-direction: column; gap: 0.6rem; margin: 1rem 0; }
+.assign h2 { margin: 0; }
+.assign-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.35rem; max-height: 16rem; overflow-y: auto; }
+.assign-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.tracking-header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.tracking-header h2 { margin: 0; }
+.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.tracking-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.tracking-table th, .tracking-table td { padding: 0.55rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.tracking-table th { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; background: var(--bg); }
+.tracking-table tbody tr:last-child td { border-bottom: none; }
+.table-sub { display: block; margin: 0; }
+.table-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
+.table-actions .button, .table-actions button { padding: 0.3rem 0.65rem; font-size: 0.85rem; }
+.exam-wait { margin: 0.75rem 0; }
+.exam-turno { margin: 0.3rem 0 0; font-weight: 600; font-size: 0.92rem; }
+.horarios { display: flex; flex-direction: column; gap: 0.6rem; }
+.horario { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; }
+.horario-locked { background: var(--bg); }
+.horario-add { align-self: flex-start; }
+.link-button.danger-link { color: var(--danger); }
+.login-switch { text-align: center; }

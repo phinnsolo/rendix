@@ -3,14 +3,15 @@ import LazyCodeEditor from './LazyCodeEditor.jsx'
 
 // Área de respuesta del alumno para un apartado (la forma de `value` la define emptyAnswer).
 // `showCorrect` marca la opción correcta en Multiple Choice (vista del profesor).
-export default function BlockAnswer({ block, value, onChange, showCorrect = false }) {
+// `readOnly` muestra una respuesta ya entregada.
+// En GeoGebra la respuesta vive dentro del applet: `onGeoGebraReady(api)` permite leerla al enviar.
+export default function BlockAnswer({ block, value, onChange, showCorrect = false, readOnly = false, onGeoGebraReady }) {
   if (block.tipo === 'codigo') {
-    return <LazyCodeEditor value={value} language={block.lenguaje} onChange={onChange} label="Respuesta" />
+    return <LazyCodeEditor value={value} language={block.lenguaje} onChange={onChange} label="Respuesta" readOnly={readOnly} />
   }
 
   if (block.tipo === 'geogebra') {
-    // Más adelante la respuesta será la construcción del alumno (api.getBase64()).
-    return <GeoGebraApplet initialBase64={block.ggbBase64} />
+    return <GeoGebraApplet initialBase64={value} onReady={onGeoGebraReady} readOnly={readOnly} />
   }
 
   if (block.tipo === 'opcion-multiple') {
@@ -23,9 +24,13 @@ export default function BlockAnswer({ block, value, onChange, showCorrect = fals
               name={`respuesta-${block.id}`}
               checked={value === opcion.id}
               onChange={() => onChange(opcion.id)}
+              disabled={readOnly}
             />
             {opcion.texto}
             {showCorrect && opcion.correcta && <span className="chip correct">Correcta</span>}
+            {showCorrect && readOnly && value === opcion.id && !opcion.correcta && (
+              <span className="chip incorrect">Incorrecta</span>
+            )}
           </label>
         ))}
       </div>
@@ -37,8 +42,9 @@ export default function BlockAnswer({ block, value, onChange, showCorrect = fals
       rows={4}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="Respuesta del alumno…"
+      placeholder={readOnly ? '(Sin respuesta)' : 'Respuesta del alumno…'}
       aria-label="Respuesta"
+      readOnly={readOnly}
     />
   )
 }

@@ -6,7 +6,8 @@ let appletCount = 0
 // Applet oficial de GeoGebra embebido en la página. Puede haber varios a la vez (cada uno con su id).
 // `initialBase64` es la construcción guardada; solo se usa al montar.
 // `onReady(api)` recibe la API del applet al cargar, y `onReady(null)` al desmontarse.
-export default function GeoGebraApplet({ initialBase64, onReady }) {
+// `readOnly` oculta las herramientas de edición (para ver una entrega); solo se lee al montar.
+export default function GeoGebraApplet({ initialBase64, onReady, readOnly = false }) {
   const containerRef = useRef(null)
   const targetRef = useRef(null)
   const [status, setStatus] = useState('loading')
@@ -21,8 +22,10 @@ export default function GeoGebraApplet({ initialBase64, onReady }) {
 
     // GeoGebra no se adapta solo al contenedor: se le pasa el tamaño inicial y se actualiza al redimensionar.
     const size = () => [Math.floor(container.clientWidth), Math.floor(container.clientHeight)]
+    // Si el contenedor se oculta (ventanita de herramientas cerrada) mide 0: no se achica el applet.
     const observer = new ResizeObserver(() => {
-      if (api) api.setSize(...size())
+      const [width, height] = size()
+      if (api && width > 0 && height > 0) api.setSize(width, height)
     })
 
     loadGeoGebra()
@@ -36,9 +39,9 @@ export default function GeoGebraApplet({ initialBase64, onReady }) {
             width,
             height,
             language: 'es',
-            showToolBar: true,
-            showAlgebraInput: true,
-            showMenuBar: true,
+            showToolBar: !readOnly,
+            showAlgebraInput: !readOnly,
+            showMenuBar: !readOnly,
             enableShiftDragZoom: true,
             // Sin autoescalado: el tamaño lo maneja el ResizeObserver con setSize.
             disableAutoScale: true,

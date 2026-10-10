@@ -1,17 +1,21 @@
-// Único módulo que accede al almacenamiento de documentos.
+// Único módulo que accede al almacenamiento de documentos (parciales).
 // Para migrar a una base de datos, reemplazar estas funciones.
 // Cada profesor tiene su propia clave: rendix_documents_<username>.
 
 import { getSession } from './auth.js'
 import { textFromBlocks } from './documentBlocks.js'
+import { deleteSubmissionsFor } from './submissionsStore.js'
+import { deleteTurnosFor } from './turnosStore.js'
 
-function storageKey() {
-  return `rendix_documents_${getSession().username}`
+export const ESTADOS = { borrador: 'borrador', publicado: 'publicado' }
+
+function storageKey(username = getSession().username) {
+  return `rendix_documents_${username}`
 }
 
-function readAll() {
+function readAll(username) {
   try {
-    return JSON.parse(localStorage.getItem(storageKey())) || []
+    return JSON.parse(localStorage.getItem(storageKey(username))) || []
   } catch {
     return []
   }
@@ -21,21 +25,44 @@ function writeAll(documents) {
   localStorage.setItem(storageKey(), JSON.stringify(documents))
 }
 
+function byFechaModificacion(a, b) {
+  return b.fechaModificacion.localeCompare(a.fechaModificacion)
+}
+
+// Los documentos creados antes de que existiera el estado se consideran borradores.
+export function isPublished(doc) {
+  return doc?.estado === ESTADOS.publicado
+}
+
 export function getDocuments() {
-  return readAll().sort((a, b) => b.fechaModificacion.localeCompare(a.fechaModificacion))
+  return readAll().sort(byFechaModificacion)
 }
 
 export function getDocument(id) {
   return readAll().find((doc) => doc.id === id) || null
 }
 
-export function createDocument({ titulo, tema, herramientas, bloques }) {
+// Parciales publicados de un profesor, para la vista del alumno. Nunca devuelve borradores.
+export function getPublishedDocumentsOf(profesor) {
+  return readAll(profesor)
+    .filter((doc) => isPublished(doc) && (doc.profesor ?? profesor) === profesor)
+    .sort((a, b) => b.fechaPublicacion.localeCompare(a.fechaPublicacion))
+}
+
+export function getPublishedDocumentOf(profesor, id) {
+  return getPublishedDocumentsOf(profesor).find((doc) => doc.id === id) || null
+}
+
+export function createDocument({ titulo, tema, herramientas, duracion, bloques }) {
   const ahora = new Date().toISOString()
   const doc = {
     id: crypto.randomUUID(),
+    profesor: getSession().username,
+    estado: ESTADOS.borrador,
     titulo,
     tema,
     herramientas,
+    duracion,
     contenido: textFromBlocks(bloques),
     bloques,
     fechaCreacion: ahora,
@@ -45,7 +72,7 @@ export function createDocument({ titulo, tema, herramientas, bloques }) {
   return doc
 }
 
-export function updateDocument(id, { titulo, tema, herramientas, bloques }) {
+export function updateDocument(id, { titulo, tema, herramientas, duracion, bloques }) {
   let updated = null
   const documents = readAll().map((doc) => {
     if (doc.id !== id) return doc
@@ -54,6 +81,7 @@ export function updateDocument(id, { titulo, tema, herramientas, bloques }) {
       titulo,
       tema,
       herramientas,
+      duracion,
       contenido: textFromBlocks(bloques),
       bloques,
       fechaModificacion: new Date().toISOString(),
@@ -64,6 +92,19 @@ export function updateDocument(id, { titulo, tema, herramientas, bloques }) {
   return updated
 }
 
+export function publishDocument(id) {
+  const username = getSession().username
+  writeAll(
+    readAll().map((doc) =>
+      doc.id === id
+        ? { ...doc, profesor: doc.profesor ?? username, estado: ESTADOS.publicado, fechaPublicacion: new Date().toISOString() }
+        : doc
+    )
+  )
+}
+
 export function deleteDocument(id) {
   writeAll(readAll().filter((doc) => doc.id !== id))
+  deleteSubmissionsFor(id)
+  deleteTurnosFor(id)
 }

@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import DocumentForm from '../components/DocumentForm.jsx'
 import NotFound from '../components/NotFound.jsx'
 import { getDocument, updateDocument } from '../documentsStore.js'
+import { getTurnosFor, syncHorarios } from '../turnosStore.js'
 
 export default function DocumentEditPage() {
   const { id } = useParams()
@@ -10,16 +11,18 @@ export default function DocumentEditPage() {
 
   if (!doc) return <NotFound />
 
-  function handleSubmit(values) {
+  function handleSubmit({ horarios, ...values }) {
     updateDocument(id, values)
+    syncHorarios(id, horarios, values.duracion)
     navigate(`/documentos/${id}`)
   }
 
   return (
     <>
-      <h1>Editar documento</h1>
+      <h1>Editar parcial</h1>
       <DocumentForm
         initialValues={doc}
+        initialHorarios={getTurnosFor(id)}
         onSubmit={handleSubmit}
         submitLabel="Guardar cambios"
         cancelTo={`/documentos/${id}`}

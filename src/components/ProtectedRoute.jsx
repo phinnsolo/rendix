@@ -1,9 +1,14 @@
 import { Navigate } from 'react-router-dom'
-import { isLoggedIn } from '../auth.js'
+import { getRole, getSession, homePath } from '../auth.js'
 
-export default function ProtectedRoute({ children }) {
-  if (!isLoggedIn()) {
+// Sin sesión manda al login; con otro rol, a la pantalla de inicio de ese rol.
+export default function ProtectedRoute({ role, children }) {
+  const session = getSession()
+  if (!session) {
     return <Navigate to="/login" replace />
+  }
+  if (role && getRole(session) !== role) {
+    return <Navigate to={homePath(session)} replace />
   }
   return children
 }
