@@ -1,12 +1,13 @@
-// Único módulo que accede al almacenamiento de turnos.
+// Único módulo que accede al almacenamiento de turnos asignados a parciales.
 // Para migrar a una base de datos, reemplazar estas funciones.
 // Cada profesor tiene su propia clave: rendix_turnos_<username>.
-// Un turno es un parcial publicado con fecha, horario y los alumnos que lo rinden.
+// Cada registro es un parcial programado en uno de los turnos fijos de config.js (TURNOS), con fecha,
+// hora de inicio y hora de fin (inicio + duración del parcial), y los alumnos que lo rinden.
 // También guarda cuándo abrió cada alumno el parcial (aperturas), para el seguimiento del profesor.
 
 import { getSession } from './auth.js'
-import { PROFESORES } from './config.js'
-import { getDocument, isPublished } from './documentsStore.js'
+import { PROFESORES, TURNOS } from './config.js'
+import { isValidDuracion } from './examSettings.js'
 
 function storageKey(profesor) {
   return `rendix_turnos_${profesor}`
@@ -24,7 +25,38 @@ function writeAll(profesor, turnos) {
   localStorage.setItem(storageKey(profesor), JSON.stringify(turnos))
 }
 
-// La fecha y las horas se interpretan en la hora local del navegador.
+// --- Horas ('HH:MM')
+
+function aMinutos(hora) {
+  const [h, m] = hora.split(':').map(Number)
+  return h * 60 + m
+}
+
+function aHora(minutos) {
+  return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`
+}
+
+export function sumarMinutos(hora, minutos) {
+  return aHora(aMinutos(hora) + minutos)
+}
+
+// Hora de inicio más temprana y más tardía para que un parcial de `duracion` minutos entre en el turno,
+// o null si no entra.
+export function rangoInicio(turno, duracion) {
+  const franja = TURNOS[turno]
+  if (!franja || !isValidDuracion(duracion)) return null
+  const hasta = aMinutos(franja.fin) - duracion
+  if (hasta < aMinutos(franja.inicio)) return null
+  return { desde: franja.inicio, hasta: aHora(hasta) }
+}
+
+// Los turnos creados antes de los turnos fijos tenían un nombre propio.
+export function nombreTurno(turno) {
+  return TURNOS[turno.turno]?.nombre ?? turno.nombre
+}
+
+// --- Estado (la fecha y las horas se interpretan en la hora local del navegador)
+
 export function turnoInicio(turno) {
   return new Date(`${turno.fecha}T${turno.horaInicio}`)
 }
@@ -45,11 +77,15 @@ export function hasStarted(turno, ahora = Date.now()) {
 
 export function formatHorario(turno) {
   const fecha = turnoInicio(turno).toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
-  return `${fecha} · ${turno.horaInicio} a ${turno.horaFin}`
+  return `${nombreTurno(turno)} · ${fecha} · ${turno.horaInicio} a ${turno.horaFin}`
 }
 
 export function alumnosLabel(n) {
   return n === 1 ? '1 alumno' : `${n} alumnos`
+}
+
+export function turnosLabel(n) {
+  return n === 1 ? '1 turno' : `${n} turnos`
 }
 
 function byInicio(a, b) {
@@ -67,75 +103,80 @@ export function getTurno(id) {
 }
 
 export function getTurnosFor(parcialId) {
-  return readAll().filter((t) => t.parcialId === parcialId)
+  return readAll().filter((t) => t.parcialId === parcialId).sort(byInicio)
+}
+
+// El próximo turno de un parcial que todavía no empezó, o null.
+export function proximoTurno(parcialId) {
+  return getTurnosFor(parcialId).find((t) => !hasStarted(t)) ?? null
+}
+
+// Devuelve { campo: mensaje } con los errores de un turno asignado; vacío si se puede guardar.
+export function validateHorario({ turno, fecha, horaInicio }, duracion) {
+  const errores = {}
+  if (!TURNOS[turno]) errores.turno = 'Elegí un turno.'
+  if (!fecha) errores.fecha = 'La fecha es obligatoria.'
+  if (!isValidDuracion(duracion)) {
+    errores.horaInicio = 'Primero indicá la duración del parcial.'
+    return errores
+  }
+  if (errores.turno) return errores
+  const rango = rangoInicio(turno, duracion)
+  const franja = TURNOS[turno]
+  if (!rango) {
+    errores.horaInicio = `Un parcial de ${duracion} min no entra en el ${franja.nombre.toLowerCase()} (${franja.inicio} a ${franja.fin}).`
+  } else if (!horaInicio) {
+    errores.horaInicio = 'La hora de inicio es obligatoria.'
+  } else if (horaInicio < rango.desde || horaInicio > rango.hasta) {
+    errores.horaInicio =
+      `Con ${duracion} min, en el ${franja.nombre.toLowerCase()} (${franja.inicio} a ${franja.fin}) ` +
+      `tiene que empezar entre las ${rango.desde} y las ${rango.hasta}.`
+  } else if (fecha && new Date(`${fecha}T${horaInicio}`).getTime() <= Date.now()) {
+    errores.horaInicio = 'El horario ya pasó: elegí una fecha y hora a futuro.'
+  }
+  return errores
+}
+
+// Guarda los turnos de un parcial tal como quedaron en el formulario. `horarios` son
+// { id?, turno, fecha, horaInicio }: los que tienen id actualizan uno existente y los demás se crean.
+// Los que ya empezaron no se modifican ni se borran.
+export function syncHorarios(parcialId, horarios, duracion) {
+  const profesor = getSession().username
+  const todos = readAll()
+  const porId = new Map(horarios.filter((h) => h.id).map((h) => [h.id, h]))
+  const resultado = []
+  for (const t of todos) {
+    if (t.parcialId !== parcialId || hasStarted(t)) {
+      resultado.push(t)
+      continue
+    }
+    const h = porId.get(t.id)
+    if (h) resultado.push({ ...t, turno: h.turno, fecha: h.fecha, horaInicio: h.horaInicio, horaFin: sumarMinutos(h.horaInicio, duracion) })
+  }
+  for (const h of horarios.filter((h) => !h.id)) {
+    resultado.push({
+      id: crypto.randomUUID(),
+      profesor,
+      parcialId,
+      turno: h.turno,
+      fecha: h.fecha,
+      horaInicio: h.horaInicio,
+      horaFin: sumarMinutos(h.horaInicio, duracion),
+      alumnos: [],
+      aperturas: {},
+      fechaCreacion: new Date().toISOString(),
+    })
+  }
+  writeAll(profesor, resultado)
+}
+
+export function deleteTurnosFor(parcialId) {
+  writeAll(getSession().username, readAll().filter((t) => t.parcialId !== parcialId))
 }
 
 // Otro turno del mismo parcial donde ya está el alumno (cada alumno rinde un parcial en un solo turno).
 function turnoConAlumno(turnos, parcialId, alumno, exceptoId) {
   return turnos.find((t) => t.id !== exceptoId && t.parcialId === parcialId && t.alumnos.includes(alumno)) || null
-}
-
-// Devuelve { campo: mensaje } con los errores; vacío si el turno se puede guardar.
-export function validateTurno({ nombre, parcialId, fecha, horaInicio, horaFin }, id = null) {
-  const errores = {}
-  if (!nombre.trim()) errores.nombre = 'El nombre es obligatorio.'
-  if (!parcialId) errores.parcialId = 'Elegí un examen.'
-  else if (!isPublished(getDocument(parcialId))) errores.parcialId = 'Solo se puede elegir un examen publicado.'
-  if (!fecha) errores.fecha = 'La fecha es obligatoria.'
-  if (!horaInicio) errores.horaInicio = 'La hora de inicio es obligatoria.'
-  if (!horaFin) errores.horaFin = 'La hora de fin es obligatoria.'
-  else if (horaInicio && horaFin <= horaInicio) errores.horaFin = 'La hora de fin tiene que ser posterior a la de inicio.'
-
-  if (id && parcialId && !errores.parcialId) {
-    const turnos = readAll()
-    const actual = turnos.find((t) => t.id === id)
-    const repetido = actual?.alumnos.find((alumno) => turnoConAlumno(turnos, parcialId, alumno, id))
-    if (repetido) errores.parcialId = `${repetido} ya está asignado a otro turno de ese examen.`
-  }
-  return errores
-}
-
-export function createTurno({ nombre, parcialId, fecha, horaInicio, horaFin }) {
-  const turno = {
-    id: crypto.randomUUID(),
-    profesor: getSession().username,
-    nombre: nombre.trim(),
-    parcialId,
-    fecha,
-    horaInicio,
-    horaFin,
-    alumnos: [],
-    aperturas: {},
-    fechaCreacion: new Date().toISOString(),
-  }
-  writeAll(turno.profesor, [...readAll(), turno])
-  return turno
-}
-
-function assertNotStarted(turno) {
-  if (!turno) throw new Error('El turno no existe.')
-  if (hasStarted(turno)) throw new Error('El turno ya comenzó: no se puede modificar.')
-}
-
-export function updateTurno(id, { nombre, parcialId, fecha, horaInicio, horaFin }) {
-  assertNotStarted(getTurno(id))
-  let updated = null
-  const turnos = readAll().map((t) => {
-    if (t.id !== id) return t
-    updated = { ...t, nombre: nombre.trim(), parcialId, fecha, horaInicio, horaFin }
-    return updated
-  })
-  writeAll(getSession().username, turnos)
-  return updated
-}
-
-export function deleteTurno(id) {
-  assertNotStarted(getTurno(id))
-  writeAll(getSession().username, readAll().filter((t) => t.id !== id))
-}
-
-export function deleteTurnosFor(parcialId) {
-  writeAll(getSession().username, readAll().filter((t) => t.parcialId !== parcialId))
 }
 
 // Agrega alumnos sin repetir. Devuelve los que no se pudieron asignar porque ya rinden ese examen en otro turno.
@@ -156,7 +197,9 @@ export function asignarAlumnos(id, usernames) {
 }
 
 export function quitarAlumno(id, username) {
-  assertNotStarted(getTurno(id))
+  const turno = getTurno(id)
+  if (!turno) throw new Error('El turno no existe.')
+  if (hasStarted(turno)) throw new Error('El turno ya comenzó: no se puede modificar.')
   writeAll(
     getSession().username,
     readAll().map((t) => (t.id === id ? { ...t, alumnos: t.alumnos.filter((a) => a !== username) } : t))

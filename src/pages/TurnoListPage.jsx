@@ -1,36 +1,30 @@
-import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getDocument } from '../documentsStore.js'
-import { alumnosLabel, deleteTurno, estadoTurno, formatHorario, getTurnos } from '../turnosStore.js'
+import { getDocument, isPublished } from '../documentsStore.js'
+import { getSubmissionsFor } from '../submissionsStore.js'
+import { alumnosLabel, estadoTurno, formatHorario, getTurnos } from '../turnosStore.js'
 
 const TABS = {
-  proximo: { label: 'Próximos', vacio: 'No hay turnos próximos.' },
-  'en-curso': { label: 'En curso', vacio: 'No hay turnos en curso.' },
-  finalizado: { label: 'Finalizados', vacio: 'Todavía no terminó ningún turno.' },
+  proximo: { label: 'Próximos', vacio: 'No hay parciales publicados por tomarse.' },
+  'en-curso': { label: 'En curso', vacio: 'No se está tomando ningún parcial ahora.' },
+  finalizado: { label: 'Finalizados', vacio: 'Todavía no terminó ningún parcial.' },
 }
 
+// Parciales publicados según su turno: los que vienen, los que se están tomando ahora y los terminados.
+// Los turnos se asignan desde cada parcial; acá solo se consultan.
 export default function TurnoListPage() {
-  const [turnos, setTurnos] = useState(getTurnos)
-  // La pestaña vive en la URL para que "Volver a turnos" y el refresh la conserven.
+  const turnos = getTurnos()
+    .map((turno) => ({ turno, doc: getDocument(turno.parcialId) }))
+    .filter(({ doc }) => isPublished(doc))
+  // La pestaña vive en la URL para que "Volver" y el refresh la conserven.
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = TABS[searchParams.get('tab')] ? searchParams.get('tab') : 'proximo'
-  const deTab = (key) => turnos.filter((t) => estadoTurno(t) === key)
+  const deTab = (key) => turnos.filter(({ turno }) => estadoTurno(turno) === key)
   // Los finalizados, del más reciente al más viejo.
   const visibles = tab === 'finalizado' ? deTab(tab).reverse() : deTab(tab)
 
-  function handleDelete(turno) {
-    if (window.confirm(`¿Eliminar el turno "${turno.nombre}"?`)) {
-      deleteTurno(turno.id)
-      setTurnos(getTurnos())
-    }
-  }
-
   return (
     <>
-      <div className="page-header">
-        <h1>Turnos</h1>
-        <Link to="/turnos/nuevo" className="button">Nuevo turno</Link>
-      </div>
+      <h1>Turnos</h1>
 
       <div className="tabs" role="tablist">
         {Object.entries(TABS).map(([key, { label }]) => (
@@ -51,27 +45,25 @@ export default function TurnoListPage() {
         <p className="muted">{TABS[tab].vacio}</p>
       ) : (
         <ul className="doc-list">
-          {visibles.map((turno) => (
-            <li key={turno.id} className="card">
-              <div>
-                <Link to={`/turnos/${turno.id}`} className="doc-title">{turno.nombre}</Link>
-                <p className="muted small">
-                  {getDocument(turno.parcialId)?.titulo ?? 'Examen eliminado'} · {formatHorario(turno)} ·{' '}
-                  {alumnosLabel(turno.alumnos.length)}
-                </p>
-              </div>
-              <div className="actions">
-                {tab === 'proximo' ? (
-                  <>
-                    <Link to={`/turnos/${turno.id}/editar`} className="button secondary">Editar</Link>
-                    <button type="button" className="danger" onClick={() => handleDelete(turno)}>Eliminar</button>
-                  </>
-                ) : (
-                  <Link to={`/turnos/${turno.id}`} className="button secondary">Seguimiento</Link>
-                )}
-              </div>
-            </li>
-          ))}
+          {visibles.map(({ turno, doc }) => {
+            const asignados = new Set(turno.alumnos)
+            const enviaron = getSubmissionsFor(doc.id).filter((e) => asignados.has(e.alumno)).length
+            const seguimiento = `/documentos/${doc.id}/turnos/${turno.id}`
+            return (
+              <li key={turno.id} className="card">
+                <div>
+                  <Link to={`/documentos/${doc.id}`} className="doc-title">{doc.titulo}</Link>
+                  <p className="muted small">
+                    {formatHorario(turno)} · {alumnosLabel(turno.alumnos.length)}
+                    {tab !== 'proximo' && ` · Enviaron ${enviaron} de ${turno.alumnos.length}`}
+                  </p>
+                </div>
+                <Link to={seguimiento} className="button secondary">
+                  {tab === 'proximo' ? 'Alumnos' : 'Seguimiento'}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </>

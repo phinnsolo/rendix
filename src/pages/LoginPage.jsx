@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { homePath, isLoggedIn, login } from '../auth.js'
 import logo from '../assets/rendix-logo.png'
 
@@ -31,7 +31,7 @@ export default function LoginPage() {
           <p className="muted">Iniciar sesión</p>
         </div>
         <label>
-          Usuario
+          Usuario o mail
           <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
         </label>
         <label>
@@ -40,6 +40,9 @@ export default function LoginPage() {
         </label>
         {error && <p className="error">{error}</p>}
         <button type="submit">Ingresar</button>
+        <p className="muted small login-switch">
+          ¿Sos alumno y no tenés cuenta? <Link to="/registro">Crear cuenta</Link>
+        </p>
       </form>
     </main>
   )

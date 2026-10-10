@@ -4,6 +4,7 @@ import { deleteDocument, getDocuments, isPublished, publishDocument } from '../d
 import { formatDate } from '../formatDate.js'
 import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
 import { avisoBorrado } from '../deleteNotice.js'
+import { formatHorario, proximoTurno } from '../turnosStore.js'
 
 const TABS = {
   creados: { label: 'Creados', vacio: 'No hay parciales sin publicar.' },
@@ -25,7 +26,7 @@ export default function DocumentListPage() {
   }
 
   function handlePublish(doc) {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Después vas a poder crear turnos para que lo rindan.`)) {
+    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos asignados a sus turnos lo van a ver.`)) {
       publishDocument(doc.id)
       setDocuments(getDocuments())
     }
@@ -57,28 +58,39 @@ export default function DocumentListPage() {
         <p className="muted">{TABS[tab].vacio}</p>
       ) : (
         <ul className="doc-list">
-          {visibles.map((doc) => (
-            <li key={doc.id} className="card">
-              <div>
-                <Link to={`/documentos/${doc.id}`} className="doc-title">{doc.titulo}</Link>
-                <p className="muted small">
-                  {doc.tema && `${doc.tema} · `}
-                  {isPublished(doc)
-                    ? `Publicado: ${formatDate(doc.fechaPublicacion)} · ${entregasLabel(getSubmissionsFor(doc.id).length)}`
-                    : `Modificado: ${formatDate(doc.fechaModificacion)}`}
-                </p>
-              </div>
-              <div className="actions">
-                {!isPublished(doc) && (
-                  <button type="button" onClick={() => handlePublish(doc)}>Publicar</button>
-                )}
-                <Link to={`/documentos/${doc.id}/editar`} className="button secondary">Editar</Link>
-                <button type="button" className="danger" onClick={() => handleDelete(doc)}>
-                  Eliminar
-                </button>
-              </div>
-            </li>
-          ))}
+          {visibles.map((doc) => {
+            const proximo = proximoTurno(doc.id)
+            return (
+              <li key={doc.id} className="card">
+                <div>
+                  <Link to={`/documentos/${doc.id}`} className="doc-title">{doc.titulo}</Link>
+                  <p className="muted small">
+                    {doc.tema && `${doc.tema} · `}
+                    {isPublished(doc)
+                      ? `Publicado: ${formatDate(doc.fechaPublicacion)} · ${entregasLabel(getSubmissionsFor(doc.id).length)}`
+                      : `Modificado: ${formatDate(doc.fechaModificacion)}`}
+                  </p>
+                  <p className="muted small">{proximo ? `Próximo: ${formatHorario(proximo)}` : 'Sin turnos por venir'}</p>
+                </div>
+                <div className="actions">
+                  {!isPublished(doc) && (
+                    <button
+                      type="button"
+                      onClick={() => handlePublish(doc)}
+                      disabled={!proximo}
+                      title={proximo ? undefined : 'Asignale un turno que todavía no haya empezado'}
+                    >
+                      Publicar
+                    </button>
+                  )}
+                  <Link to={`/documentos/${doc.id}/editar`} className="button secondary">Editar</Link>
+                  <button type="button" className="danger" onClick={() => handleDelete(doc)}>
+                    Eliminar
+                  </button>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
     </>

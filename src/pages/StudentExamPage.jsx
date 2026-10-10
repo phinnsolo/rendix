@@ -65,8 +65,8 @@ export default function StudentExamPage() {
 // Fuera del horario del turno: se muestra el motivo y no se puede abrir.
 function ExamUnavailable({ doc, turno, estado }) {
   const motivo = estado === 'proximo'
-    ? `El turno "${turno.nombre}" empieza el ${turnoInicio(turno).toLocaleDateString('es-AR')} a las ${turno.horaInicio}. Vas a poder abrir el parcial a partir de ese momento.`
-    : `El turno "${turno.nombre}" terminó el ${turnoFin(turno).toLocaleDateString('es-AR')} a las ${turno.horaFin}. Ya no se puede abrir el parcial.`
+    ? `El parcial empieza el ${turnoInicio(turno).toLocaleDateString('es-AR')} a las ${turno.horaInicio}. Vas a poder abrirlo a partir de ese momento.`
+    : `El parcial terminó el ${turnoFin(turno).toLocaleDateString('es-AR')} a las ${turno.horaFin}. Ya no se puede abrir.`
 
   return (
     <>
@@ -91,9 +91,7 @@ function ExamIntro({ doc, turno, onStart }) {
       window.alert('El turno ya no está en curso: no se puede abrir el parcial.')
       return
     }
-    const mensaje = duracion == null
-      ? '¿Comenzar el parcial?'
-      : `Tenés ${duracion} minutos. El tiempo empieza a correr y no se puede pausar. ¿Comenzar?`
+    const mensaje = `Tenés hasta las ${turno.horaFin}. El tiempo corre y no se puede pausar. ¿Comenzar?`
     if (window.confirm(mensaje)) onStart()
   }
 
@@ -104,10 +102,8 @@ function ExamIntro({ doc, turno, onStart }) {
       <div className="card exam-start">
         <p>
           {apartados === 1 ? 'El parcial tiene 1 apartado.' : `El parcial tiene ${apartados} apartados.`}{' '}
-          {duracion == null
-            ? 'No tiene límite de tiempo.'
-            : `Vas a tener ${duracion} minutos desde que lo comiences; al terminar el tiempo se envía automáticamente.`}{' '}
-          El turno termina a las {turno.horaFin}: a esa hora se envía lo que hayas respondido.
+          El parcial es de {turno.horaInicio} a {turno.horaFin}: si lo empezás más tarde tenés menos tiempo, y a las{' '}
+          {turno.horaFin} se envía lo que hayas respondido.
         </p>
         <p className="muted small">Una vez enviado no se puede modificar.</p>
         <div className="actions">

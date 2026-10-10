@@ -1,18 +1,10 @@
 import { useEffect, useReducer, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ALUMNOS } from '../config.js'
-import { getDocument } from '../documentsStore.js'
+import { Link, useParams } from 'react-router-dom'
+import { getAlumnos } from '../auth.js'
+import { getDocument, isPublished } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
-import {
-  asignarAlumnos,
-  deleteTurno,
-  estadoTurno,
-  formatHorario,
-  getApertura,
-  getTurno,
-  quitarAlumno,
-} from '../turnosStore.js'
+import { asignarAlumnos, estadoTurno, formatHorario, getApertura, getTurno, quitarAlumno } from '../turnosStore.js'
 import NotFound from '../components/NotFound.jsx'
 
 const ESTADO_TURNO = {
@@ -29,13 +21,13 @@ const ESTADO_ALUMNO = {
 }
 
 function nombreDe(username) {
-  return ALUMNOS.find((a) => a.username === username)?.nombre ?? username
+  return getAlumnos().find((a) => a.username === username)?.nombre ?? username
 }
 
-// Datos del turno, alumnos asignados y seguimiento de quién abrió y quién envió el examen.
+// Un turno asignado a un parcial: alumnos asignados y seguimiento de quién abrió y quién envió el examen.
+// El turno en sí (fecha y hora) se cambia desde Editar en el parcial.
 export default function TurnoDetailPage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
+  const { id: parcialId, turnoId } = useParams()
   // El seguimiento se vuelve a leer cada pocos segundos y cuando otra pestaña cambia el almacenamiento.
   const [, refresh] = useReducer((n) => n + 1, 0)
   useEffect(() => {
@@ -47,12 +39,13 @@ export default function TurnoDetailPage() {
     }
   }, [])
 
-  const turno = getTurno(id)
-  if (!turno) return <NotFound title="Turno no encontrado" backTo="/turnos" backLabel="Volver a turnos" />
+  const turno = getTurno(turnoId)
+  if (!turno || turno.parcialId !== parcialId) {
+    return <NotFound title="Turno no encontrado" backTo={`/documentos/${parcialId}`} backLabel="Volver al parcial" />
+  }
 
   const doc = getDocument(turno.parcialId)
   const estado = estadoTurno(turno)
-  const listPath = estado === 'proximo' ? '/turnos' : `/turnos?tab=${estado}`
   const entregas = new Map(getSubmissionsFor(turno.parcialId).map((e) => [e.alumno, e]))
 
   const filas = turno.alumnos
@@ -69,13 +62,6 @@ export default function TurnoDetailPage() {
   const abrieron = filas.filter((f) => f.apertura || f.entrega).length
   const enviaron = filas.filter((f) => f.entrega).length
 
-  function handleDelete() {
-    if (window.confirm(`¿Eliminar el turno "${turno.nombre}"?`)) {
-      deleteTurno(turno.id)
-      navigate('/turnos')
-    }
-  }
-
   function handleQuitar(username) {
     if (window.confirm(`¿Quitar a ${nombreDe(username)} del turno?`)) {
       quitarAlumno(turno.id, username)
@@ -85,21 +71,17 @@ export default function TurnoDetailPage() {
 
   return (
     <>
-      <p><Link to={listPath}>← Volver a turnos</Link></p>
-      <div className="page-header">
-        <h1>{turno.nombre}</h1>
-        {estado === 'proximo' && (
-          <div className="actions">
-            <Link to={`/turnos/${turno.id}/editar`} className="button secondary">Editar</Link>
-            <button type="button" className="danger" onClick={handleDelete}>Eliminar</button>
-          </div>
-        )}
-      </div>
+      <p><Link to={`/documentos/${parcialId}`}>← Volver al parcial</Link></p>
+      <h1>{doc?.titulo ?? 'Examen eliminado'}</h1>
       <p className="muted small chips-line">
         <span className={ESTADO_TURNO[estado].className}>{ESTADO_TURNO[estado].label}</span>
-        {formatHorario(turno)} · Examen:{' '}
-        {doc ? <Link to={`/documentos/${doc.id}`}>{doc.titulo}</Link> : 'eliminado'}
+        {formatHorario(turno)}
       </p>
+      {doc && !isPublished(doc) && (
+        <div className="card notice">
+          <span className="chip">Sin publicar</span> Los alumnos asignados no lo ven hasta que publiques el parcial.
+        </div>
+      )}
 
       {estado !== 'finalizado' && (
         <AsignarAlumnos turno={turno} onAsignados={refresh} />
@@ -168,10 +150,12 @@ function AsignarAlumnos({ turno, onAsignados }) {
   const [mensaje, setMensaje] = useState('')
 
   const texto = busqueda.trim().toLowerCase()
-  const disponibles = ALUMNOS.filter(
+  const disponibles = getAlumnos().filter(
     (a) =>
       !turno.alumnos.includes(a.username) &&
-      (a.nombre.toLowerCase().includes(texto) || a.username.toLowerCase().includes(texto))
+      (a.nombre.toLowerCase().includes(texto) ||
+        a.username.toLowerCase().includes(texto) ||
+        a.email?.toLowerCase().includes(texto))
   )
 
   function toggle(username) {
@@ -202,7 +186,7 @@ function AsignarAlumnos({ turno, onAsignados }) {
         type="search"
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar por nombre o usuario…"
+        placeholder="Buscar por nombre, usuario o mail…"
         aria-label="Buscar alumnos"
       />
       {disponibles.length === 0 ? (

@@ -84,7 +84,7 @@ function ExamCard({ turno, doc, entrega, profesor }) {
             : <span className="chip">Sin corregir</span>
           : <span className={abierto ? 'chip pending' : 'chip'}>{abierto ? 'Abierto' : 'Pendiente'}</span>}
       </div>
-      <p className="exam-turno">{turno.nombre} · {formatHorario(turno)}</p>
+      <p className="exam-turno">{formatHorario(turno)}</p>
       <p className="muted small">
         {profesor?.nombre}{tema && ` · ${tema}`} · Duración: {formatDuracion(getDuracion(doc))}
         {entrega && ` · Entregado: ${formatDate(entrega.fechaEntrega)}`}

@@ -22,6 +22,14 @@ export const TEMAS = ['Tema 1', 'Tema 2', 'Tema 3']
 export const DURACION_MAXIMA = 120
 export const DURACION_POR_DEFECTO = 60
 
+// Turnos fijos en los que se puede tomar un parcial. El profesor elige uno y la hora de inicio dentro
+// de su franja; el parcial termina a la hora de inicio + la duración, sin pasarse del fin del turno.
+export const TURNOS = {
+  manana: { nombre: 'Turno mañana', inicio: '07:45', fin: '11:45' },
+  tarde: { nombre: 'Turno tarde', inicio: '13:30', fin: '17:30' },
+  noche: { nombre: 'Turno noche', inicio: '18:30', fin: '22:30' },
+}
+
 // Herramientas que el profesor puede habilitar para el alumno durante el examen.
 // Son recursos generales del examen, distintos de los apartados GeoGebra dentro de una consigna.
 export const HERRAMIENTAS = {

@@ -9,7 +9,7 @@ import SubmissionChips from '../components/SubmissionChips.jsx'
 import { getBlocks } from '../documentBlocks.js'
 import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
-import { alumnosLabel, formatHorario, getTurnosFor } from '../turnosStore.js'
+import { alumnosLabel, estadoTurno, formatHorario, getTurnosFor } from '../turnosStore.js'
 import { avisoBorrado } from '../deleteNotice.js'
 
 export default function DocumentDetailPage() {
@@ -26,6 +26,8 @@ export default function DocumentDetailPage() {
   const listPath = publicado ? '/documentos?tab=publicados' : '/documentos'
   const entregas = getSubmissionsFor(doc.id)
   const turnos = getTurnosFor(doc.id)
+  // Publicar solo tiene sentido si queda algún turno por empezar.
+  const hayTurnoFuturo = turnos.some((t) => estadoTurno(t) === 'proximo')
 
   function handleDelete() {
     if (window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) {
@@ -35,7 +37,7 @@ export default function DocumentDetailPage() {
   }
 
   function handlePublish() {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Después vas a poder crear turnos para que lo rindan.`)) {
+    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos asignados a sus turnos lo van a ver.`)) {
       publishDocument(doc.id)
       setRecienPublicado(true)
       refresh()
@@ -55,8 +57,7 @@ export default function DocumentDetailPage() {
       </div>
       {recienPublicado && (
         <div className="card notice">
-          <span className="chip published">Publicado</span> Creá un turno y asigná alumnos para que lo puedan rendir.{' '}
-          <Link to={`/turnos/nuevo?parcial=${doc.id}`}>Crear turno</Link>
+          <span className="chip published">Publicado</span> Los alumnos asignados a sus turnos ya lo pueden ver.
         </div>
       )}
       <p className="muted small">
@@ -65,52 +66,55 @@ export default function DocumentDetailPage() {
         {publicado && ` · Publicado: ${formatDate(doc.fechaPublicacion)}`}
       </p>
 
-      {publicado && (
-        <section className="submissions">
-          <div className="tracking-header">
-            <h2>Turnos ({turnos.length})</h2>
-            <Link to={`/turnos/nuevo?parcial=${doc.id}`} className="button secondary">Crear turno</Link>
-          </div>
-          {turnos.length === 0 ? (
-            <p className="muted">Todavía no hay turnos: los alumnos no lo pueden rendir hasta que los asignes a uno.</p>
-          ) : (
-            <ul className="doc-list">
-              {turnos.map((turno) => (
-                <li key={turno.id} className="card">
-                  <div>
-                    <Link to={`/turnos/${turno.id}`} className="doc-title">{turno.nombre}</Link>
-                    <p className="muted small">{formatHorario(turno)} · {alumnosLabel(turno.alumnos.length)}</p>
-                  </div>
-                  <Link to={`/turnos/${turno.id}`} className="button secondary">Ver turno</Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          <h2>Entregas ({entregas.length})</h2>
-          {entregas.length === 0 ? (
-            <p className="muted">Todavía no hay entregas.</p>
-          ) : (
-            <ul className="doc-list">
-              {entregas.map((entrega) => (
-                <li key={entrega.id} className="card">
-                  <div>
-                    <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="doc-title">
-                      {entrega.alumnoNombre}
+      <section className="submissions">
+        <h2>Turnos ({turnos.length})</h2>
+        {turnos.length === 0 ? (
+          <p className="muted">
+            Todavía no tiene turno asignado. <Link to={`/documentos/${doc.id}/editar`}>Asignar un turno</Link>
+          </p>
+        ) : (
+          <ul className="doc-list">
+            {turnos.map((turno) => (
+              <li key={turno.id} className="card">
+                <div>
+                  <Link to={`/documentos/${doc.id}/turnos/${turno.id}`} className="doc-title">{formatHorario(turno)}</Link>
+                  <p className="muted small">{alumnosLabel(turno.alumnos.length)}</p>
+                </div>
+                <Link to={`/documentos/${doc.id}/turnos/${turno.id}`} className="button secondary">
+                  Alumnos y seguimiento
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {publicado && (
+          <>
+            <h2>Entregas ({entregas.length})</h2>
+            {entregas.length === 0 ? (
+              <p className="muted">Todavía no hay entregas.</p>
+            ) : (
+              <ul className="doc-list">
+                {entregas.map((entrega) => (
+                  <li key={entrega.id} className="card">
+                    <div>
+                      <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="doc-title">
+                        {entrega.alumnoNombre}
+                      </Link>
+                      <p className="muted small chips-line">
+                        Entregado: {formatDate(entrega.fechaEntrega)} <SubmissionChips entrega={entrega} />
+                      </p>
+                    </div>
+                    <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="button secondary">
+                      Ver entrega
                     </Link>
-                    <p className="muted small chips-line">
-                      Entregado: {formatDate(entrega.fechaEntrega)} <SubmissionChips entrega={entrega} />
-                    </p>
-                  </div>
-                  <Link to={`/documentos/${doc.id}/entregas/${entrega.id}`} className="button secondary">
-                    Ver entrega
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          <h2>Parcial</h2>
-        </section>
-      )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+        <h2>Parcial</h2>
+      </section>
 
       <ExamHeader tema={getTema(doc)} herramientas={getHerramientas(doc)} duracion={getDuracion(doc)} />
       <DocumentBlocksView blocks={getBlocks(doc)} />
@@ -119,9 +123,13 @@ export default function DocumentDetailPage() {
         <div className="card publish-bar">
           <div>
             <strong>¿Está listo?</strong>
-            <p className="muted small">Al publicarlo vas a poder crear turnos y asignarles alumnos.</p>
+            <p className="muted small">
+              {hayTurnoFuturo
+                ? 'Los alumnos asignados a sus turnos lo van a ver a partir de que lo publiques.'
+                : 'Para publicarlo, asignale un turno que todavía no haya empezado.'}
+            </p>
           </div>
-          <button type="button" onClick={handlePublish}>Publicar parcial</button>
+          <button type="button" onClick={handlePublish} disabled={!hayTurnoFuturo}>Publicar parcial</button>
         </div>
       )}
     </>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { getSession } from '../auth.js'
-import { getDocuments, isPublished } from '../documentsStore.js'
+import { getDocument, getDocuments, isPublished } from '../documentsStore.js'
 import { getAllSubmissions, isGraded } from '../submissionsStore.js'
 import { estadoTurno, getTurnos } from '../turnosStore.js'
 
@@ -10,7 +10,7 @@ export default function DashboardPage() {
   const publicados = documents.filter(isPublished).length
   const creados = documents.length - publicados
   const sinCorregir = getAllSubmissions().filter((e) => !isGraded(e)).length
-  const turnos = getTurnos()
+  const turnos = getTurnos().filter((t) => isPublished(getDocument(t.parcialId)))
   const proximos = turnos.filter((t) => estadoTurno(t) === 'proximo').length
   const enCurso = turnos.filter((t) => estadoTurno(t) === 'en-curso').length
 
