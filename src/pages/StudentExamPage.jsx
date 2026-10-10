@@ -44,7 +44,7 @@ export default function StudentExamPage() {
   }, [estado])
 
   if (!turno || (!entrega && !doc)) {
-    return <NotFound backTo="/alumno" backLabel="Volver a parciales" />
+    return <NotFound backTo="/alumno/parciales" backLabel="Volver a parciales" />
   }
 
   let content
@@ -56,7 +56,7 @@ export default function StudentExamPage() {
 
   return (
     <>
-      <p><Link to={entrega ? '/alumno?tab=entregados' : '/alumno'}>← Volver a parciales</Link></p>
+      <p><Link to={entrega ? '/alumno/parciales?tab=entregados' : '/alumno/parciales'}>← Volver a parciales</Link></p>
       {content}
     </>
   )

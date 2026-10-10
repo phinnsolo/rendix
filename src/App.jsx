@@ -8,12 +8,16 @@ import DocumentListPage from './pages/DocumentListPage.jsx'
 import DocumentCreatePage from './pages/DocumentCreatePage.jsx'
 import DocumentDetailPage from './pages/DocumentDetailPage.jsx'
 import DocumentEditPage from './pages/DocumentEditPage.jsx'
+import StudentHomePage from './pages/StudentHomePage.jsx'
 import StudentExamListPage from './pages/StudentExamListPage.jsx'
 import StudentExamPage from './pages/StudentExamPage.jsx'
 import SubmissionDetailPage from './pages/SubmissionDetailPage.jsx'
 import SubmissionsPage from './pages/SubmissionsPage.jsx'
 import TurnoDetailPage from './pages/TurnoDetailPage.jsx'
 import TurnoListPage from './pages/TurnoListPage.jsx'
+import ClaseListPage from './pages/ClaseListPage.jsx'
+import ClaseCreatePage from './pages/ClaseCreatePage.jsx'
+import ClaseDetailPage from './pages/ClaseDetailPage.jsx'
 
 export default function App() {
   return (
@@ -44,8 +48,20 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/alumno" element={<StudentExamListPage />} />
+        <Route path="/alumno" element={<StudentHomePage />} />
+        <Route path="/alumno/parciales" element={<StudentExamListPage />} />
         <Route path="/alumno/parciales/:id" element={<StudentExamPage />} />
+      </Route>
+      <Route
+        element={
+          <ProtectedRoute role="dev">
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dev" element={<ClaseListPage />} />
+        <Route path="/dev/clases/nueva" element={<ClaseCreatePage />} />
+        <Route path="/dev/clases/:id" element={<ClaseDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { getSession } from '../auth.js'
+import { getClasesDe } from '../clasesStore.js'
+import ClasesGrid from '../components/ClaseCard.jsx'
 import { getDocument, getDocuments, isPublished } from '../documentsStore.js'
 import { getAllSubmissions, isGraded } from '../submissionsStore.js'
 import { estadoTurno, getTurnos } from '../turnosStore.js'
@@ -17,6 +19,9 @@ export default function DashboardPage() {
   return (
     <>
       <h1>Hola, {session?.nombre}</h1>
+      <h2>Mis clases</h2>
+      <ClasesGrid clases={getClasesDe(session.username)} />
+      <h2 className="section-title">Accesos</h2>
       <div className="dashboard">
         <div className="card">
           <h2>Parciales</h2>

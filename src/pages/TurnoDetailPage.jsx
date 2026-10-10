@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getAlumnos } from '../auth.js'
+import { getAlumnos, nombreDe } from '../auth.js'
 import { getDocument, isPublished } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
@@ -18,10 +18,6 @@ const ESTADO_ALUMNO = {
   abierto: { label: 'Abierto', className: 'chip pending' },
   enviado: { label: 'Enviado', className: 'chip published' },
   'no-completo': { label: 'No completó', className: 'chip incorrect' },
-}
-
-function nombreDe(username) {
-  return getAlumnos().find((a) => a.username === username)?.nombre ?? username
 }
 
 // Un turno asignado a un parcial: alumnos asignados y seguimiento de quién abrió y quién envió el examen.

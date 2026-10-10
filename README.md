@@ -31,6 +31,7 @@ Abrir http://localhost:5173
 | `profesor2` | `rendix123` | Profesor Demo 2 | profesor |
 | `profesor3` | `rendix123` | Profesor Demo 3 | profesor |
 | `alumno1` … `alumno10` | `rendix123` | Alumno Demo 1 … 10 | alumno |
+| `dev1` | `rendix123` | Dev Demo | dev |
 
 Son credenciales fijas definidas en `src/config.js`. Es una solución **temporal** y no segura.
 
@@ -38,7 +39,8 @@ Un alumno también puede **crear su cuenta** desde el login ("Crear cuenta"), co
 
 ## Alcance actual
 
-- Login de profesor y de alumno (sin registro ni recuperación de contraseña). Cada rol solo puede entrar a sus pantallas.
+- Login de dev, profesor y alumno (sin recuperación de contraseña). Cada rol solo puede entrar a sus pantallas.
+- Clases: el **dev** ve todas las clases en cuadritos y crea nuevas con nombre, día de la semana, turno, profesores y alumnos. Cada clase se dicta siempre el mismo día y en el mismo turno. Al entrar, el **profesor** y el **alumno** ven en cuadritos las clases que tienen asignadas (el alumno tiene sus parciales en la sección **Parciales**). Hay dos clases predefinidas en `src/config.js`: **Matemáticas** (lunes, turno mañana; profesor1; alumno1 a alumno5) y **Física** (miércoles, turno tarde; profesor2; alumno4 a alumno8). Las que crea el dev se guardan en el navegador. Por ahora los parciales todavía no están conectados a las clases.
 - Parciales del profesor: crear, listar, ver, editar y eliminar, separados en las pestañas **Creados** y **Publicados**. Desde Creados se puede **publicar** un parcial.
 - Duración: al crear un parcial el profesor elige cuántos minutos dura (máximo 120). Los parciales anteriores quedan sin límite de tiempo.
 - Turnos: hay tres turnos fijos, definidos en `src/config.js`: mañana (07:45 a 11:45), tarde (13:30 a 17:30) y noche (18:30 a 22:30). Al crear o editar un parcial el profesor le asigna uno o más turnos, con la fecha y la hora de inicio. El fin es la hora de inicio más la duración. La hora de inicio se habilita recién cuando hay duración y turno, y no se acepta si el parcial terminaría después del fin del turno (ej. 120 min en el turno mañana tiene que empezar entre 07:45 y 09:45) ni si ya pasó. Un turno se puede cambiar o quitar solo antes de que empiece, y la duración queda fija cuando alguno ya empezó.
