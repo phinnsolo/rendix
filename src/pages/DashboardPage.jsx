@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom'
 import { getSession } from '../auth.js'
 import { getClasesDe } from '../clasesStore.js'
 import ClasesGrid from '../components/ClaseCard.jsx'
-import { getDocument, getDocuments, isPublished } from '../documentsStore.js'
+import { getDocuments, isPublished } from '../documentsStore.js'
 import { getAllSubmissions, isGraded } from '../submissionsStore.js'
-import { estadoTurno, getTurnos } from '../turnosStore.js'
 
 export default function DashboardPage() {
   const session = getSession()
@@ -12,15 +11,12 @@ export default function DashboardPage() {
   const publicados = documents.filter(isPublished).length
   const creados = documents.length - publicados
   const sinCorregir = getAllSubmissions().filter((e) => !isGraded(e)).length
-  const turnos = getTurnos().filter((t) => isPublished(getDocument(t.parcialId)))
-  const proximos = turnos.filter((t) => estadoTurno(t) === 'proximo').length
-  const enCurso = turnos.filter((t) => estadoTurno(t) === 'en-curso').length
 
   return (
     <>
       <h1>Hola, {session?.nombre}</h1>
       <h2>Mis clases</h2>
-      <ClasesGrid clases={getClasesDe(session.username)} />
+      <ClasesGrid clases={getClasesDe(session.username)} linkTo={(clase) => `/clases/${clase.id}`} />
       <h2 className="section-title">Accesos</h2>
       <div className="dashboard">
         <div className="card">
@@ -30,14 +26,6 @@ export default function DashboardPage() {
             {publicados === 1 ? '1 publicado.' : `${publicados} publicados.`}
           </p>
           <Link to="/documentos" className="button">Ir a parciales</Link>
-        </div>
-        <div className="card">
-          <h2>Turnos</h2>
-          <p className="muted">
-            {enCurso === 1 ? '1 en curso' : `${enCurso} en curso`} ·{' '}
-            {proximos === 1 ? '1 próximo.' : `${proximos} próximos.`}
-          </p>
-          <Link to="/turnos" className="button">Ir a turnos</Link>
         </div>
         <div className="card">
           <h2>Entregas</h2>

@@ -1,4 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
+import { nombreClase } from '../clasesStore.js'
+import { getDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getAllSubmissions, isGraded } from '../submissionsStore.js'
 import SubmissionChips from '../components/SubmissionChips.jsx'
@@ -18,6 +20,7 @@ export default function SubmissionsPage() {
 
   return (
     <>
+      <p><Link to="/">← Volver al inicio</Link></p>
       <h1>Entregas</h1>
       <div className="tabs" role="tablist">
         {Object.entries(TABS).map(([key, { label }]) => (
@@ -45,7 +48,7 @@ export default function SubmissionsPage() {
                 <div>
                   <Link to={to} className="doc-title">{entrega.alumnoNombre}</Link>
                   <p className="muted small chips-line">
-                    {entrega.titulo} · Entregado: {formatDate(entrega.fechaEntrega)} <SubmissionChips entrega={entrega} />
+                    {entrega.titulo} · {nombreClase(getDocument(entrega.parcialId)?.claseId)} · Entregado: {formatDate(entrega.fechaEntrega)} <SubmissionChips entrega={entrega} />
                   </p>
                 </div>
                 <Link to={to} className={isGraded(entrega) ? 'button secondary' : 'button'}>

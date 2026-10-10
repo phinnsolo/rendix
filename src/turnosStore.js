@@ -140,7 +140,8 @@ export function validateHorario({ turno, fecha, horaInicio }, duracion) {
 // Guarda los turnos de un parcial tal como quedaron en el formulario. `horarios` son
 // { id?, turno, fecha, horaInicio }: los que tienen id actualizan uno existente y los demás se crean.
 // Los que ya empezaron no se modifican ni se borran.
-export function syncHorarios(parcialId, horarios, duracion) {
+// Los `alumnosClase` que no estén en ningún turno del parcial se agregan al primero que no empezó.
+export function syncHorarios(parcialId, horarios, duracion, alumnosClase = []) {
   const profesor = getSession().username
   const todos = readAll()
   const porId = new Map(horarios.filter((h) => h.id).map((h) => [h.id, h]))
@@ -167,7 +168,60 @@ export function syncHorarios(parcialId, horarios, duracion) {
       fechaCreacion: new Date().toISOString(),
     })
   }
+  const delParcial = resultado.filter((t) => t.parcialId === parcialId).sort(byInicio)
+  const destino = delParcial.find((t) => !hasStarted(t))
+  if (destino) {
+    const faltan = alumnosClase.filter((a) => !delParcial.some((t) => t.alumnos.includes(a)))
+    destino.alumnos = [...destino.alumnos, ...faltan]
+  }
   writeAll(profesor, resultado)
+}
+
+// Turno que empieza en este momento y dura `duracion` minutos (sin pasar de la medianoche). Puede quedar
+// fuera de las franjas fijas: si la hora cae en una, usa esa; si no, se llama "Fuera de turno".
+export function crearTurnoAhora(parcialId, duracion) {
+  const profesor = getSession().username
+  const ahora = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  const horaInicio = `${p(ahora.getHours())}:${p(ahora.getMinutes())}`
+  const franja = Object.entries(TURNOS).find(([, t]) => horaInicio >= t.inicio && horaInicio < t.fin)?.[0] ?? null
+  const turno = {
+    id: crypto.randomUUID(),
+    profesor,
+    parcialId,
+    turno: franja,
+    ...(franja ? {} : { nombre: 'Fuera de turno' }),
+    fecha: `${ahora.getFullYear()}-${p(ahora.getMonth() + 1)}-${p(ahora.getDate())}`,
+    horaInicio,
+    horaFin: aMinutos(horaInicio) + duracion >= 24 * 60 ? '23:59' : sumarMinutos(horaInicio, duracion),
+    alumnos: [],
+    aperturas: {},
+    fechaCreacion: ahora.toISOString(),
+  }
+  writeAll(profesor, [...readAll(), turno])
+  return turno
+}
+
+// Borra los turnos de un parcial que todavía no empezaron y quedaron sin alumnos.
+export function borrarTurnosVacios(parcialId) {
+  const profesor = getSession().username
+  writeAll(profesor, readAll().filter((t) => t.parcialId !== parcialId || hasStarted(t) || t.alumnos.length > 0))
+}
+
+// Cuando cambian los alumnos de una clase: los agregados entran al primer turno del parcial que no empezó
+// y los quitados salen de los turnos que no empezaron. Los turnos en curso o terminados no se tocan.
+export function actualizarAlumnosDeParcial(profesor, parcialId, agregados, quitados) {
+  const turnos = readAll(profesor).map((t) => {
+    if (t.parcialId !== parcialId || hasStarted(t)) return t
+    return { ...t, alumnos: t.alumnos.filter((a) => !quitados.includes(a)) }
+  })
+  const delParcial = turnos.filter((t) => t.parcialId === parcialId).sort(byInicio)
+  const destino = delParcial.find((t) => !hasStarted(t))
+  if (destino) {
+    const faltan = agregados.filter((a) => !delParcial.some((t) => t.alumnos.includes(a)))
+    destino.alumnos = [...destino.alumnos, ...faltan]
+  }
+  writeAll(profesor, turnos)
 }
 
 export function deleteTurnosFor(parcialId) {
@@ -179,9 +233,11 @@ function turnoConAlumno(turnos, parcialId, alumno, exceptoId) {
   return turnos.find((t) => t.id !== exceptoId && t.parcialId === parcialId && t.alumnos.includes(alumno)) || null
 }
 
-// Agrega alumnos sin repetir. Devuelve los que no se pudieron asignar porque ya rinden ese examen en otro turno.
+// Agrega alumnos sin repetir. Si un alumno está en otro turno del mismo parcial que todavía no empezó,
+// se lo mueve a este. Devuelve los que no se pudieron asignar porque ya rinden ese examen en otro turno
+// que empezó.
 export function asignarAlumnos(id, usernames) {
-  const turnos = readAll()
+  let turnos = readAll()
   const turno = turnos.find((t) => t.id === id)
   if (!turno) throw new Error('El turno no existe.')
   if (estadoTurno(turno) === 'finalizado') throw new Error('El turno ya terminó.')
@@ -189,8 +245,15 @@ export function asignarAlumnos(id, usernames) {
   const alumnos = [...turno.alumnos]
   for (const username of usernames) {
     if (alumnos.includes(username)) continue
-    if (turnoConAlumno(turnos, turno.parcialId, username, id)) rechazados.push(username)
-    else alumnos.push(username)
+    const otro = turnoConAlumno(turnos, turno.parcialId, username, id)
+    if (otro && hasStarted(otro)) {
+      rechazados.push(username)
+      continue
+    }
+    if (otro) {
+      turnos = turnos.map((t) => (t.id === otro.id ? { ...t, alumnos: t.alumnos.filter((a) => a !== username) } : t))
+    }
+    alumnos.push(username)
   }
   writeAll(turno.profesor, turnos.map((t) => (t.id === id ? { ...t, alumnos } : t)))
   return rechazados

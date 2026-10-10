@@ -29,7 +29,10 @@ export default function ClaseDetailPage() {
   return (
     <>
       <p><Link to="/dev">← Volver a clases</Link></p>
-      <h1>{clase.nombre}</h1>
+      <div className="page-header">
+        <h1>{clase.nombre}</h1>
+        <Link to={`/dev/clases/${clase.id}/editar`} className="button secondary">Editar</Link>
+      </div>
       <p className="muted small chips-line">
         {isPredefinida(clase) && <span className="chip">Predefinida</span>}
         {formatDiaTurno(clase)}

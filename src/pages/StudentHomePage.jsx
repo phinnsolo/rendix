@@ -9,7 +9,7 @@ export default function StudentHomePage() {
   return (
     <>
       <h1>Mis clases</h1>
-      <ClasesGrid clases={getClasesDe(session.username)} />
+      <ClasesGrid clases={getClasesDe(session.username)} linkTo={(clase) => `/alumno/clases/${clase.id}`} />
     </>
   )
 }

@@ -8,9 +8,15 @@ function toggle(lista, username) {
   return lista.includes(username) ? lista.filter((u) => u !== username) : [...lista, username]
 }
 
-// Crear una clase: nombre, día y turno fijos, y los profesores y alumnos asignados.
-export default function ClaseForm({ onSubmit, submitLabel, cancelTo }) {
-  const [values, setValues] = useState({ nombre: '', dia: '', turno: '', profesores: [], alumnos: [] })
+// Crear o editar una clase: nombre, día y turno fijos, y los profesores y alumnos asignados.
+export default function ClaseForm({ initialValues, onSubmit, submitLabel, cancelTo }) {
+  const [values, setValues] = useState(() => ({
+    nombre: initialValues?.nombre ?? '',
+    dia: initialValues?.dia ?? '',
+    turno: initialValues?.turno ?? '',
+    profesores: initialValues?.profesores ?? [],
+    alumnos: initialValues?.alumnos ?? [],
+  }))
   const [busqueda, setBusqueda] = useState('')
   const [errores, setErrores] = useState({})
   const [error, setError] = useState('')

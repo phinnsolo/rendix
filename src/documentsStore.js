@@ -53,12 +53,28 @@ export function getPublishedDocumentOf(profesor, id) {
   return getPublishedDocumentsOf(profesor).find((doc) => doc.id === id) || null
 }
 
-export function createDocument({ titulo, tema, herramientas, duracion, bloques }) {
+// Parciales del profesor logueado en una clase.
+export function getDocumentsDeClase(claseId) {
+  return getDocuments().filter((doc) => doc.claseId === claseId)
+}
+
+// Ids de los parciales (publicados o no) que un profesor tiene en una clase.
+export function getDocumentIdsDeClase(profesor, claseId) {
+  return readAll(profesor).filter((doc) => doc.claseId === claseId).map((doc) => doc.id)
+}
+
+// Parciales publicados de una clase, de todos sus profesores. Para la vista del alumno.
+export function getPublishedDocumentsDeClase(clase) {
+  return clase.profesores.flatMap(getPublishedDocumentsOf).filter((doc) => doc.claseId === clase.id)
+}
+
+export function createDocument({ claseId, titulo, tema, herramientas, duracion, bloques }) {
   const ahora = new Date().toISOString()
   const doc = {
     id: crypto.randomUUID(),
     profesor: getSession().username,
     estado: ESTADOS.borrador,
+    claseId,
     titulo,
     tema,
     herramientas,
@@ -72,12 +88,13 @@ export function createDocument({ titulo, tema, herramientas, duracion, bloques }
   return doc
 }
 
-export function updateDocument(id, { titulo, tema, herramientas, duracion, bloques }) {
+export function updateDocument(id, { claseId, titulo, tema, herramientas, duracion, bloques }) {
   let updated = null
   const documents = readAll().map((doc) => {
     if (doc.id !== id) return doc
     updated = {
       ...doc,
+      claseId,
       titulo,
       tema,
       herramientas,

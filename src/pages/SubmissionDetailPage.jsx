@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { getClase } from '../clasesStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmission } from '../submissionsStore.js'
 import ExamBlocks from '../components/ExamBlocks.jsx'
@@ -20,9 +21,12 @@ export default function SubmissionDetailPage() {
   const { id, entregaId } = useParams()
   const [searchParams] = useSearchParams()
   const [entrega, setEntrega] = useState(() => getSubmission(entregaId))
-  const back = searchParams.get('from') === 'entregas'
-    ? { to: '/entregas', label: 'Volver a entregas' }
-    : { to: `/documentos/${id}`, label: 'Volver al parcial' }
+  const clase = getClase(searchParams.get('clase'))
+  const back = clase
+    ? { to: `/clases/${clase.id}?tab=entregas`, label: `Volver a ${clase.nombre}` }
+    : searchParams.get('from') === 'entregas'
+      ? { to: '/entregas', label: 'Volver a entregas' }
+      : { to: `/documentos/${id}`, label: 'Volver al parcial' }
 
   if (!entrega || entrega.parcialId !== id) {
     return <NotFound title="Entrega no encontrada" backTo={back.to} backLabel={back.label} />

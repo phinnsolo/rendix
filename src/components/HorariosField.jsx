@@ -8,15 +8,16 @@ function hoy() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function nuevoHorario() {
-  return { key: crypto.randomUUID(), turno: '', fecha: '', horaInicio: '' }
+export function nuevoHorario(turno = '') {
+  return { key: crypto.randomUUID(), turno, fecha: '', horaInicio: '' }
 }
 
 // Turnos en los que se toma el parcial: uno de los turnos fijos, la fecha y la hora de inicio.
 // La hora de inicio se habilita recién con la duración y el turno, y solo acepta horarios que
 // terminen dentro del turno. Los que ya empezaron se muestran sin poder cambiarlos.
 // `value` son filas { key, id?, turno, fecha, horaInicio, bloqueado? }; `errores` va alineado con ellas.
-export default function HorariosField({ value, onChange, duracion, errores = [] }) {
+// Las filas nuevas empiezan con `turnoPorDefecto` (el turno de la clase).
+export default function HorariosField({ value, onChange, duracion, errores = [], turnoPorDefecto = '' }) {
   function update(key, changes) {
     onChange(value.map((h) => (h.key === key ? { ...h, ...changes } : h)))
   }
@@ -108,7 +109,7 @@ export default function HorariosField({ value, onChange, duracion, errores = [] 
           </div>
         )
       })}
-      <button type="button" className="secondary horario-add" onClick={() => onChange([...value, nuevoHorario()])}>
+      <button type="button" className="secondary horario-add" onClick={() => onChange([...value, nuevoHorario(turnoPorDefecto)])}>
         + Asignar otro turno
       </button>
     </fieldset>

@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getAlumnos, nombreDe } from '../auth.js'
+import { getClase } from '../clasesStore.js'
 import { getDocument, isPublished } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
@@ -80,7 +81,7 @@ export default function TurnoDetailPage() {
       )}
 
       {estado !== 'finalizado' && (
-        <AsignarAlumnos turno={turno} onAsignados={refresh} />
+        <AsignarAlumnos turno={turno} clase={getClase(doc?.claseId)} onAsignados={refresh} />
       )}
 
       <section className="submissions">
@@ -139,14 +140,16 @@ export default function TurnoDetailPage() {
   )
 }
 
-// Buscar alumnos registrados y asignar uno o varios al turno.
-function AsignarAlumnos({ turno, onAsignados }) {
+// Buscar alumnos y asignar uno o varios al turno: los de la clase del parcial o, si no tiene clase, todos
+// los registrados. Si ya estaban en otro turno del parcial que no empezó, se los mueve a este.
+function AsignarAlumnos({ turno, clase, onAsignados }) {
   const [busqueda, setBusqueda] = useState('')
   const [seleccion, setSeleccion] = useState([])
   const [mensaje, setMensaje] = useState('')
 
   const texto = busqueda.trim().toLowerCase()
-  const disponibles = getAlumnos().filter(
+  const candidatos = clase ? getAlumnos().filter((a) => clase.alumnos.includes(a.username)) : getAlumnos()
+  const disponibles = candidatos.filter(
     (a) =>
       !turno.alumnos.includes(a.username) &&
       (a.nombre.toLowerCase().includes(texto) ||
@@ -166,7 +169,7 @@ function AsignarAlumnos({ turno, onAsignados }) {
       setMensaje(
         rechazados.length === 0
           ? ''
-          : `No se asignó a ${rechazados.map(nombreDe).join(', ')}: ya rinde este examen en otro turno.`
+          : `No se asignó a ${rechazados.map(nombreDe).join(', ')}: ya rinde este examen en otro turno que empezó.`
       )
     } catch (e) {
       setMensaje(e.message.startsWith('El turno') ? e.message : 'No se pudo guardar: el almacenamiento del navegador está lleno.')
