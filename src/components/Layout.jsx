@@ -7,14 +7,14 @@ import icon from '../assets/rendix-icon.png'
 export default function Layout() {
   const navigate = useNavigate()
   const session = getSession()
-  const esAlumno = getRole(session) === 'alumno'
+  const rol = getRole(session)
   // useNavigate re-renderiza el Layout en cada navegación; al corregir sin navegar, avisa CORRECCION_EVENT.
   const [, refresh] = useReducer((n) => n + 1, 0)
   useEffect(() => {
     window.addEventListener(CORRECCION_EVENT, refresh)
     return () => window.removeEventListener(CORRECCION_EVENT, refresh)
   }, [])
-  const sinCorregir = esAlumno ? 0 : getAllSubmissions().filter((e) => !isGraded(e)).length
+  const sinCorregir = rol !== 'profesor' ? 0 : getAllSubmissions().filter((e) => !isGraded(e)).length
 
   function handleLogout() {
     logout()
@@ -29,12 +29,20 @@ export default function Layout() {
           Rendix
         </Link>
         <nav>
-          <NavLink to={esAlumno ? '/alumno' : '/documentos'}>Parciales</NavLink>
-          {!esAlumno && <NavLink to="/turnos">Turnos</NavLink>}
-          {!esAlumno && (
-            <NavLink to="/entregas">
-              Entregas{sinCorregir > 0 && <span className="nav-badge" aria-label={`${sinCorregir} sin corregir`}>{sinCorregir}</span>}
-            </NavLink>
+          {rol === 'dev' && <NavLink to="/dev">Clases</NavLink>}
+          {rol === 'alumno' && (
+            <>
+              <NavLink to="/alumno" end>Mis clases</NavLink>
+              <NavLink to="/alumno/parciales">Parciales</NavLink>
+            </>
+          )}
+          {rol === 'profesor' && (
+            <>
+              <NavLink to="/documentos">Parciales</NavLink>
+              <NavLink to="/entregas">
+                Entregas{sinCorregir > 0 && <span className="nav-badge" aria-label={`${sinCorregir} sin corregir`}>{sinCorregir}</span>}
+              </NavLink>
+            </>
           )}
         </nav>
         <div className="header-user">

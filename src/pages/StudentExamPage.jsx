@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { getSession } from '../auth.js'
+import { getClase } from '../clasesStore.js'
 import { getPublishedDocumentOf } from '../documentsStore.js'
 import { emptyAnswer, getBlocks } from '../documentBlocks.js'
 import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
@@ -30,6 +31,9 @@ function isUnanswered(block, value) {
 export default function StudentExamPage() {
   const { id } = useParams()
   const session = getSession()
+  // Con ?clase=<id> (al entrar desde una clase), "Volver" lleva a esa clase.
+  const [searchParams] = useSearchParams()
+  const clase = getClase(searchParams.get('clase'))
   const [turno] = useState(() => getTurnoDeAlumno(session.username, id))
   const doc = turno ? getPublishedDocumentOf(turno.profesor, id) : null
   const [entrega, setEntrega] = useState(() => (turno ? getSubmissionOf(turno.profesor, id, session.username) : null))
@@ -44,7 +48,9 @@ export default function StudentExamPage() {
   }, [estado])
 
   if (!turno || (!entrega && !doc)) {
-    return <NotFound backTo="/alumno" backLabel="Volver a parciales" />
+    return clase
+      ? <NotFound backTo={`/alumno/clases/${clase.id}`} backLabel={`Volver a ${clase.nombre}`} />
+      : <NotFound backTo="/alumno/parciales" backLabel="Volver a parciales" />
   }
 
   let content
@@ -56,7 +62,11 @@ export default function StudentExamPage() {
 
   return (
     <>
-      <p><Link to={entrega ? '/alumno?tab=entregados' : '/alumno'}>← Volver a parciales</Link></p>
+      <p>
+        {clase
+          ? <Link to={`/alumno/clases/${clase.id}`}>← Volver a {clase.nombre}</Link>
+          : <Link to={entrega ? '/alumno/parciales?tab=entregados' : '/alumno/parciales'}>← Volver a parciales</Link>}
+      </p>
       {content}
     </>
   )

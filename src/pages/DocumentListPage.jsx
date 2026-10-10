@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { nombreClase } from '../clasesStore.js'
 import { deleteDocument, getDocuments, isPublished, publishDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
 import { avisoBorrado } from '../deleteNotice.js'
+import TomarAhoraButton from '../components/TomarAhoraButton.jsx'
 import { formatHorario, proximoTurno } from '../turnosStore.js'
 
 const TABS = {
@@ -26,7 +28,7 @@ export default function DocumentListPage() {
   }
 
   function handlePublish(doc) {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos asignados a sus turnos lo van a ver.`)) {
+    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) {
       publishDocument(doc.id)
       setDocuments(getDocuments())
     }
@@ -34,6 +36,7 @@ export default function DocumentListPage() {
 
   return (
     <>
+      <p><Link to="/">← Volver al inicio</Link></p>
       <div className="page-header">
         <h1>Parciales</h1>
         <Link to="/documentos/nuevo" className="button">Nuevo parcial</Link>
@@ -65,7 +68,7 @@ export default function DocumentListPage() {
                 <div>
                   <Link to={`/documentos/${doc.id}`} className="doc-title">{doc.titulo}</Link>
                   <p className="muted small">
-                    {doc.tema && `${doc.tema} · `}
+                    {nombreClase(doc.claseId)} · {doc.tema && `${doc.tema} · `}
                     {isPublished(doc)
                       ? `Publicado: ${formatDate(doc.fechaPublicacion)} · ${entregasLabel(getSubmissionsFor(doc.id).length)}`
                       : `Modificado: ${formatDate(doc.fechaModificacion)}`}
@@ -83,6 +86,7 @@ export default function DocumentListPage() {
                       Publicar
                     </button>
                   )}
+                  <TomarAhoraButton doc={doc} onTomado={() => setDocuments(getDocuments())} />
                   <Link to={`/documentos/${doc.id}/editar`} className="button secondary">Editar</Link>
                   <button type="button" className="danger" onClick={() => handleDelete(doc)}>
                     Eliminar

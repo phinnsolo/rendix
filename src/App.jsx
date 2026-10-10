@@ -8,12 +8,18 @@ import DocumentListPage from './pages/DocumentListPage.jsx'
 import DocumentCreatePage from './pages/DocumentCreatePage.jsx'
 import DocumentDetailPage from './pages/DocumentDetailPage.jsx'
 import DocumentEditPage from './pages/DocumentEditPage.jsx'
+import StudentHomePage from './pages/StudentHomePage.jsx'
 import StudentExamListPage from './pages/StudentExamListPage.jsx'
 import StudentExamPage from './pages/StudentExamPage.jsx'
 import SubmissionDetailPage from './pages/SubmissionDetailPage.jsx'
 import SubmissionsPage from './pages/SubmissionsPage.jsx'
 import TurnoDetailPage from './pages/TurnoDetailPage.jsx'
-import TurnoListPage from './pages/TurnoListPage.jsx'
+import ClaseListPage from './pages/ClaseListPage.jsx'
+import ClaseCreatePage from './pages/ClaseCreatePage.jsx'
+import ClaseDetailPage from './pages/ClaseDetailPage.jsx'
+import ClaseEditPage from './pages/ClaseEditPage.jsx'
+import ClaseProfesorPage from './pages/ClaseProfesorPage.jsx'
+import ClaseAlumnoPage from './pages/ClaseAlumnoPage.jsx'
 
 export default function App() {
   return (
@@ -35,7 +41,7 @@ export default function App() {
         <Route path="/documentos/:id/entregas/:entregaId" element={<SubmissionDetailPage />} />
         <Route path="/entregas" element={<SubmissionsPage />} />
         <Route path="/documentos/:id/turnos/:turnoId" element={<TurnoDetailPage />} />
-        <Route path="/turnos" element={<TurnoListPage />} />
+        <Route path="/clases/:id" element={<ClaseProfesorPage />} />
       </Route>
       <Route
         element={
@@ -44,8 +50,22 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/alumno" element={<StudentExamListPage />} />
+        <Route path="/alumno" element={<StudentHomePage />} />
+        <Route path="/alumno/clases/:id" element={<ClaseAlumnoPage />} />
+        <Route path="/alumno/parciales" element={<StudentExamListPage />} />
         <Route path="/alumno/parciales/:id" element={<StudentExamPage />} />
+      </Route>
+      <Route
+        element={
+          <ProtectedRoute role="dev">
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dev" element={<ClaseListPage />} />
+        <Route path="/dev/clases/nueva" element={<ClaseCreatePage />} />
+        <Route path="/dev/clases/:id" element={<ClaseDetailPage />} />
+        <Route path="/dev/clases/:id/editar" element={<ClaseEditPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

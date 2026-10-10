@@ -1,4 +1,4 @@
-import { ALUMNOS, PROFESORES } from './config.js'
+import { ALUMNOS, DEVS, PROFESORES } from './config.js'
 
 // La sesión vive en sessionStorage: cada pestaña tiene la suya, así se puede tener al profesor en una
 // y a un alumno en otra. Los datos (parciales, turnos, entregas) siguen en localStorage, compartidos.
@@ -25,7 +25,12 @@ export function getAlumnos() {
 }
 
 function usuarios() {
-  return [...PROFESORES, ...getAlumnos()]
+  return [...DEVS, ...PROFESORES, ...getAlumnos()]
+}
+
+// Nombre para mostrar de cualquier usuario; si no existe, el propio usuario.
+export function nombreDe(username) {
+  return usuarios().find((u) => u.username === username)?.nombre ?? username
 }
 
 function iniciarSesion(usuario) {
@@ -100,6 +105,8 @@ export function getRole(session = getSession()) {
   return session?.rol ?? 'profesor'
 }
 
+const HOME = { alumno: '/alumno', dev: '/dev', profesor: '/' }
+
 export function homePath(session = getSession()) {
-  return getRole(session) === 'alumno' ? '/alumno' : '/'
+  return HOME[getRole(session)] ?? '/'
 }

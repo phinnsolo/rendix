@@ -271,3 +271,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .horario-add { align-self: flex-start; }
 .link-button.danger-link { color: var(--danger); }
 .login-switch { text-align: center; }
+
+/* Clases */
+.clases-grid { list-style: none; margin: 0 0 1.5rem; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+.clase-card { display: flex; flex-direction: column; gap: 0.3rem; height: 100%; box-sizing: border-box; border-top: 4px solid var(--primary); color: var(--text); text-decoration: none; }
+a.clase-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); }
+.clase-card .small { margin: 0; }
+.clase-nombre { font-weight: 700; font-size: 1.15rem; }
+.clase-horario { font-size: 0.92rem; font-weight: 600; }
+.section-title { margin-top: 0.5rem; }
+.clase-alumnos { display: flex; flex-direction: column; gap: 0.5rem; }
+.clase-alumnos > button { align-self: flex-start; }
+.clase-integrantes { margin: 1rem 0; }

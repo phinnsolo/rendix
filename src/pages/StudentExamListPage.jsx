@@ -1,11 +1,10 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { getSession } from '../auth.js'
-import { HERRAMIENTAS, PROFESORES } from '../config.js'
+import { PROFESORES } from '../config.js'
 import { getPublishedDocumentOf } from '../documentsStore.js'
-import { formatDuracion, getDuracion, getHerramientas, getTema } from '../examSettings.js'
-import { formatDate } from '../formatDate.js'
-import { getSubmissionOf, isGraded } from '../submissionsStore.js'
-import { formatHorario, getApertura, getTurnosDeAlumno } from '../turnosStore.js'
+import { getSubmissionOf } from '../submissionsStore.js'
+import { getTurnosDeAlumno } from '../turnosStore.js'
+import ExamCard from '../components/StudentExamCard.jsx'
 
 const TABS = {
   pendientes: { label: 'A entregar', vacio: 'No tenés parciales para entregar.' },
@@ -64,44 +63,5 @@ export default function StudentExamListPage() {
         </ul>
       )}
     </>
-  )
-}
-
-function ExamCard({ turno, doc, entrega, profesor }) {
-  const tema = getTema(doc)
-  const herramientas = getHerramientas(doc)
-  const habilitadas = Object.entries(HERRAMIENTAS).filter(([key]) => herramientas[key])
-  const abierto = !entrega && getApertura(turno, getSession().username) !== null
-  const to = `/alumno/parciales/${doc.id}`
-
-  return (
-    <li className="card student-exam">
-      <div className="student-exam-main">
-        <Link to={to} className="doc-title">{doc.titulo}</Link>
-        {entrega
-          ? isGraded(entrega)
-            ? <span className="chip published">Nota: {entrega.correccion.nota}</span>
-            : <span className="chip">Sin corregir</span>
-          : <span className={abierto ? 'chip pending' : 'chip'}>{abierto ? 'Abierto' : 'Pendiente'}</span>}
-      </div>
-      <p className="exam-turno">{formatHorario(turno)}</p>
-      <p className="muted small">
-        {profesor?.nombre}{tema && ` · ${tema}`} · Duración: {formatDuracion(getDuracion(doc))}
-        {entrega && ` · Entregado: ${formatDate(entrega.fechaEntrega)}`}
-      </p>
-      {!entrega && (
-        <div className="exam-tools">
-          <span className="muted">Herramientas:</span>
-          {habilitadas.length === 0
-            ? <span className="muted">ninguna</span>
-            : habilitadas.map(([key, label]) => <span key={key} className="chip">{label}</span>)}
-        </div>
-      )}
-      <div className="actions">
-        <Link to={to} className={entrega ? 'button secondary' : 'button'}>
-          {entrega ? 'Ver entrega' : abierto ? 'Continuar' : 'Abrir'}
-        </Link>
-      </div>
-    </li>
   )
 }

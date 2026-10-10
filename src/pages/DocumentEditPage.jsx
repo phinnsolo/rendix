@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import DocumentForm from '../components/DocumentForm.jsx'
 import NotFound from '../components/NotFound.jsx'
+import { getClase } from '../clasesStore.js'
 import { getDocument, updateDocument } from '../documentsStore.js'
 import { getTurnosFor, syncHorarios } from '../turnosStore.js'
 
@@ -13,7 +14,7 @@ export default function DocumentEditPage() {
 
   function handleSubmit({ horarios, ...values }) {
     updateDocument(id, values)
-    syncHorarios(id, horarios, values.duracion)
+    syncHorarios(id, horarios, values.duracion, getClase(values.claseId)?.alumnos)
     navigate(`/documentos/${id}`)
   }
 

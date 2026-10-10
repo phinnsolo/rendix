@@ -7,6 +7,11 @@ export const PROFESORES = [
   { username: 'profesor3', password: 'rendix123', nombre: 'Profesor Demo 3', rol: 'profesor' },
 ]
 
+// Desarrolladores: crean las clases y les asignan profesores y alumnos.
+export const DEVS = [
+  { username: 'dev1', password: 'rendix123', nombre: 'Dev Demo', rol: 'dev' },
+]
+
 // Alumnos registrados. Qué parciales ve cada uno lo deciden los turnos a los que lo asigna un profesor.
 export const ALUMNOS = Array.from({ length: 10 }, (_, i) => ({
   username: `alumno${i + 1}`,
@@ -36,3 +41,34 @@ export const HERRAMIENTAS = {
   calculadora: 'Calculadora',
   geogebra: 'GeoGebra',
 }
+
+// Días de la semana en que puede dictarse una clase.
+export const DIAS = {
+  lunes: 'Lunes',
+  martes: 'Martes',
+  miercoles: 'Miércoles',
+  jueves: 'Jueves',
+  viernes: 'Viernes',
+  sabado: 'Sábado',
+}
+
+// Clases predefinidas (no se editan desde la app). Cada clase se dicta siempre el mismo día y turno.
+// Las que crea el dev se guardan aparte, en clasesStore.js.
+export const CLASES = [
+  {
+    id: 'matematicas',
+    nombre: 'Matemáticas',
+    dia: 'lunes',
+    turno: 'manana',
+    profesores: ['profesor1'],
+    alumnos: ['alumno1', 'alumno2', 'alumno3', 'alumno4', 'alumno5'],
+  },
+  {
+    id: 'fisica',
+    nombre: 'Física',
+    dia: 'miercoles',
+    turno: 'tarde',
+    profesores: ['profesor2'],
+    alumnos: ['alumno4', 'alumno5', 'alumno6', 'alumno7', 'alumno8'],
+  },
+]

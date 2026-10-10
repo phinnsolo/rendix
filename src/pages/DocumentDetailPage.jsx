@@ -1,11 +1,13 @@
 import { useReducer, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { getClase } from '../clasesStore.js'
 import { deleteDocument, getDocument, isPublished, publishDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import NotFound from '../components/NotFound.jsx'
 import DocumentBlocksView from '../components/DocumentBlocksView.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
+import TomarAhoraButton from '../components/TomarAhoraButton.jsx'
 import { getBlocks } from '../documentBlocks.js'
 import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
@@ -23,7 +25,10 @@ export default function DocumentDetailPage() {
   if (!doc) return <NotFound />
 
   const publicado = isPublished(doc)
-  const listPath = publicado ? '/documentos?tab=publicados' : '/documentos'
+  const clase = getClase(doc.claseId)
+  const back = clase
+    ? { to: `/clases/${clase.id}`, label: `Volver a ${clase.nombre}` }
+    : { to: publicado ? '/documentos?tab=publicados' : '/documentos', label: 'Volver a parciales' }
   const entregas = getSubmissionsFor(doc.id)
   const turnos = getTurnosFor(doc.id)
   // Publicar solo tiene sentido si queda algún turno por empezar.
@@ -32,12 +37,18 @@ export default function DocumentDetailPage() {
   function handleDelete() {
     if (window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) {
       deleteDocument(doc.id)
-      navigate(listPath)
+      navigate(back.to)
     }
   }
 
+  function handleTomado() {
+    setRecienPublicado(true)
+    refresh()
+    window.scrollTo(0, 0)
+  }
+
   function handlePublish() {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos asignados a sus turnos lo van a ver.`)) {
+    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) {
       publishDocument(doc.id)
       setRecienPublicado(true)
       refresh()
@@ -47,21 +58,23 @@ export default function DocumentDetailPage() {
 
   return (
     <>
-      <p><Link to={listPath}>← Volver a parciales</Link></p>
+      <p><Link to={back.to}>← {back.label}</Link></p>
       <div className="page-header">
         <h1>{doc.titulo}</h1>
         <div className="actions">
           <Link to={`/documentos/${doc.id}/editar`} className="button secondary">Editar</Link>
+          <TomarAhoraButton doc={doc} onTomado={handleTomado} />
           <button type="button" className="danger" onClick={handleDelete}>Eliminar</button>
         </div>
       </div>
       {recienPublicado && (
         <div className="card notice">
-          <span className="chip published">Publicado</span> Los alumnos asignados a sus turnos ya lo pueden ver.
+          <span className="chip published">Publicado</span> Los alumnos de la clase ya lo pueden ver.
         </div>
       )}
       <p className="muted small">
         <span className={publicado ? 'chip published' : 'chip'}>{publicado ? 'Publicado' : 'Sin publicar'}</span>{' '}
+        {clase ? <Link to={`/clases/${clase.id}`}>{clase.nombre}</Link> : 'Sin clase'} ·{' '}
         Creado: {formatDate(doc.fechaCreacion)} · Modificado: {formatDate(doc.fechaModificacion)}
         {publicado && ` · Publicado: ${formatDate(doc.fechaPublicacion)}`}
       </p>
@@ -125,11 +138,14 @@ export default function DocumentDetailPage() {
             <strong>¿Está listo?</strong>
             <p className="muted small">
               {hayTurnoFuturo
-                ? 'Los alumnos asignados a sus turnos lo van a ver a partir de que lo publiques.'
+                ? 'Los alumnos de la clase lo van a ver a partir de que lo publiques.'
                 : 'Para publicarlo, asignale un turno que todavía no haya empezado.'}
             </p>
           </div>
-          <button type="button" onClick={handlePublish} disabled={!hayTurnoFuturo}>Publicar parcial</button>
+          <div className="actions">
+            <TomarAhoraButton doc={doc} onTomado={handleTomado} />
+            <button type="button" onClick={handlePublish} disabled={!hayTurnoFuturo}>Publicar parcial</button>
+          </div>
         </div>
       )}
     </>
