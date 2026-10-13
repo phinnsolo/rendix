@@ -9,6 +9,7 @@ import { alumnosLabel, estadoTurno, formatHorario, getTurnosFor, proximoTurno } 
 import NotFound from '../components/NotFound.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
 import TomarAhoraButton from '../components/TomarAhoraButton.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 const TABS = { parciales: 'Parciales', entregas: 'Entregas' }
 
@@ -70,7 +71,7 @@ export default function ClaseProfesorPage() {
 
   return (
     <>
-      <p><Link to="/">← Volver al inicio</Link></p>
+      <BackLink to="/">Volver al inicio</BackLink>
       <div className="page-header">
         <h1>{clase.nombre}</h1>
         <Link to={`/documentos/nuevo?clase=${clase.id}`} className="button">Nuevo parcial</Link>

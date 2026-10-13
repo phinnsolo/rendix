@@ -7,6 +7,7 @@ import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
 import { asignarAlumnos, estadoTurno, formatHorario, getApertura, getTurno, quitarAlumno } from '../turnosStore.js'
 import NotFound from '../components/NotFound.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 const ESTADO_TURNO = {
   proximo: { label: 'Próximo', className: 'chip' },
@@ -68,7 +69,7 @@ export default function TurnoDetailPage() {
 
   return (
     <>
-      <p><Link to={`/documentos/${parcialId}`}>← Volver al parcial</Link></p>
+      <BackLink to={`/documentos/${parcialId}`}>Volver al parcial</BackLink>
       <h1>{doc?.titulo ?? 'Examen eliminado'}</h1>
       <p className="muted small chips-line">
         <span className={ESTADO_TURNO[estado].className}>{ESTADO_TURNO[estado].label}</span>

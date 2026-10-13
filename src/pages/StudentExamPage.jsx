@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { getSession } from '../auth.js'
 import { getClase } from '../clasesStore.js'
 import { getPublishedDocumentOf } from '../documentsStore.js'
@@ -12,6 +12,7 @@ import ExamBlocks from '../components/ExamBlocks.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import ExamToolsPanel from '../components/ExamToolsPanel.jsx'
 import NotFound from '../components/NotFound.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 function initialAnswers(blocks, parcialId) {
   const draft = getDraftAnswers(parcialId) || {}
@@ -62,11 +63,9 @@ export default function StudentExamPage() {
 
   return (
     <>
-      <p>
-        {clase
-          ? <Link to={`/alumno/clases/${clase.id}`}>← Volver a {clase.nombre}</Link>
-          : <Link to={entrega ? '/alumno/parciales?tab=entregados' : '/alumno/parciales'}>← Volver a parciales</Link>}
-      </p>
+      {clase
+        ? <BackLink to={`/alumno/clases/${clase.id}`}>Volver a {clase.nombre}</BackLink>
+        : <BackLink to={entrega ? '/alumno/parciales?tab=entregados' : '/alumno/parciales'}>Volver a parciales</BackLink>}
       {content}
     </>
   )

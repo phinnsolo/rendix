@@ -121,6 +121,29 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 button.danger:hover:not(:disabled) { background: var(--danger-tint); border-color: var(--danger); color: var(--danger); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Volver: pestañita con flecha arriba del título */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  margin: 0 0 1rem;
+  padding: 0.3rem 0.8rem 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sheet);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.12s, border-color 0.12s, background-color 0.12s;
+}
+.back-link:hover { color: var(--primary); border-color: #c3cdea; background: var(--primary-tint); }
+.back-link-arrow { width: 1rem; height: 1rem; flex-shrink: 0; transition: transform 0.12s; }
+.back-link:hover .back-link-arrow { transform: translateX(-2px); }
+h1 + .back-link { display: flex; width: fit-content; }
+
 .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .page-header h1 { margin: 0; }

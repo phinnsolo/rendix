@@ -7,6 +7,7 @@ import { entregasLabel, getSubmissionsFor } from '../submissionsStore.js'
 import { avisoBorrado } from '../deleteNotice.js'
 import TomarAhoraButton from '../components/TomarAhoraButton.jsx'
 import { formatHorario, proximoTurno } from '../turnosStore.js'
+import BackLink from '../components/BackLink.jsx'
 
 const TABS = {
   creados: { label: 'Creados', vacio: 'No hay parciales sin publicar.' },
@@ -36,7 +37,7 @@ export default function DocumentListPage() {
 
   return (
     <>
-      <p><Link to="/">← Volver al inicio</Link></p>
+      <BackLink to="/">Volver al inicio</BackLink>
       <div className="page-header">
         <h1>Parciales</h1>
         <Link to="/documentos/nuevo" className="button">Nuevo parcial</Link>

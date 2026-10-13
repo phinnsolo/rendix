@@ -13,6 +13,7 @@ import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
 import { alumnosLabel, estadoTurno, formatHorario, getTurnosFor } from '../turnosStore.js'
 import { avisoBorrado } from '../deleteNotice.js'
+import BackLink from '../components/BackLink.jsx'
 
 export default function DocumentDetailPage() {
   const { id } = useParams()
@@ -58,7 +59,7 @@ export default function DocumentDetailPage() {
 
   return (
     <>
-      <p><Link to={back.to}>← {back.label}</Link></p>
+      <BackLink to={back.to}>{back.label}</BackLink>
       <div className="page-header">
         <h1>{doc.titulo}</h1>
         <div className="actions">

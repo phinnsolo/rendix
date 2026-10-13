@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { getSession, nombreDe } from '../auth.js'
 import { formatDiaTurno, getClase } from '../clasesStore.js'
 import { getPublishedDocumentsDeClase } from '../documentsStore.js'
@@ -6,6 +6,7 @@ import { getSubmissionOf } from '../submissionsStore.js'
 import { estadoTurno, getTurnosDeAlumno } from '../turnosStore.js'
 import ExamCard from '../components/StudentExamCard.jsx'
 import NotFound from '../components/NotFound.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 // Una clase del alumno: los parciales que tiene para hacer ahora, los programados y los entregados.
 // Los que terminaron sin entregar van con los entregados, marcados como no entregados.
@@ -39,7 +40,7 @@ export default function ClaseAlumnoPage() {
 
   return (
     <>
-      <p><Link to="/alumno">← Volver a mis clases</Link></p>
+      <BackLink to="/alumno">Volver a mis clases</BackLink>
       <h1>{clase.nombre}</h1>
       <p className="muted small">
         {formatDiaTurno(clase)} · {clase.profesores.length === 1 ? 'Profesor' : 'Profesores'}:{' '}
