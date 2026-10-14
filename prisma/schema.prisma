@@ -1,0 +1,248 @@
+// Modelo de datos - Sprint 1 (exámenes online)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Neon: la app usa la conexión pooled (PgBouncer) y Prisma Migrate la directa.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Rol {
+  PROFESOR
+  ALUMNO
+}
+
+enum EstadoExamen {
+  BORRADOR
+  PUBLICADO
+}
+
+enum EstadoEntrega {
+  EN_CURSO // el alumno eligió tema y/o comenzó, pero todavía no entregó
+  ENTREGADO // entregada, pendiente de corrección
+  EN_CORRECCION // el profesor guardó una corrección parcial
+  CORREGIDO // el profesor marcó la corrección como terminada
+}
+
+// NORMAL: todos responden las mismas consignas. POR_TEMAS: el alumno elige un único tema
+// y responde solo las consignas de ese tema.
+enum ModoExamen {
+  NORMAL
+  POR_TEMAS
+}
+
+enum TipoConsigna {
+  DESARROLLO // respuesta escrita (comportamiento original)
+  OPCION_MULTIPLE
+  VERDADERO_FALSO
+  DIAGRAMA // pizarra / editor gráfico
+}
+
+// Origen de una sugerencia de puntaje. La nota final siempre la decide el profesor.
+enum FuenteSugerencia {
+  AUTOMATICA // regla determinística (opción múltiple, V/F)
+  IA // reservado para futuros Sprints
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String
+  rol          Rol
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  examenesCreados Examen[]           @relation("ExamenesProfesor")
+  clasesDictadas  Clase[]            @relation("ClasesProfesor")
+  inscripcion     InscripcionClase?
+  asignaciones    AsignacionExamen[]
+  entregas        Entrega[]
+
+  @@index([rol])
+}
+
+// Una clase (comisión) agrupa alumnos. El acceso a un examen se deriva de la clase:
+// Examen → Clase → alumnos inscriptos. No hay asignaciones alumno por alumno.
+model Clase {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?  @db.Text
+  profesorId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profesor      Usuario            @relation("ClasesProfesor", fields: [profesorId], references: [id], onDelete: Restrict)
+  inscripciones InscripcionClase[]
+  examenes      Examen[]
+
+  @@unique([profesorId, nombre])
+  @@index([profesorId])
+}
+
+// Pertenencia alumno ↔ clase. Hoy un alumno pertenece a UNA sola clase (UNIQUE alumnoId);
+// para permitir varias clases por alumno alcanza con reemplazarlo por UNIQUE(claseId, alumnoId).
+model InscripcionClase {
+  id        String   @id @default(cuid())
+  claseId   String
+  alumnoId  String   @unique
+  createdAt DateTime @default(now())
+
+  clase  Clase   @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  alumno Usuario @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+
+  @@index([claseId])
+}
+
+model Examen {
+  id                   String       @id @default(cuid())
+  titulo               String
+  enunciado            String       @db.Text
+  estado               EstadoExamen @default(BORRADOR)
+  modo                 ModoExamen   @default(NORMAL)
+  profesorId           String
+  // Clase a la que se asigna el examen (obligatoria para publicar).
+  claseId              String?
+  // Momento desde el que el alumno puede comenzar (null = apenas se publica).
+  fechaDisponible      DateTime?
+  // Tiempo para resolverlo desde que el alumno comienza (null = sin límite).
+  duracionMinutos      Int?
+  habilitarEscritura   Boolean      @default(true)
+  habilitarCalculadora Boolean      @default(false)
+  habilitarGeoGebra    Boolean      @default(false)
+  fechaCreacion        DateTime     @default(now())
+  fechaPublicacion     DateTime?
+  updatedAt            DateTime     @updatedAt
+
+  profesor     Usuario            @relation("ExamenesProfesor", fields: [profesorId], references: [id], onDelete: Restrict)
+  clase        Clase?             @relation(fields: [claseId], references: [id], onDelete: Restrict)
+  temas        Tema[]
+  consignas    Consigna[]
+  asignaciones AsignacionExamen[]
+  entregas     Entrega[]
+
+  @@index([profesorId])
+  @@index([estado])
+  @@index([claseId])
+}
+
+// Tema de un examen POR_TEMAS. Cada tema tiene sus propias consignas.
+model Tema {
+  id          String  @id @default(cuid())
+  examenId    String
+  nombre      String // "Tema 1"
+  titulo      String? // "Inteligencia Artificial"
+  descripcion String? @db.Text
+  orden       Int
+
+  examen    Examen     @relation(fields: [examenId], references: [id], onDelete: Cascade)
+  consignas Consigna[]
+  entregas  Entrega[]
+
+  // Destino de las FK compuestas (temaId, examenId): garantiza que el tema sea del mismo examen.
+  @@unique([id, examenId])
+  @@unique([examenId, orden])
+}
+
+model Consigna {
+  id                String       @id @default(cuid())
+  examenId          String
+  // Solo en exámenes POR_TEMAS. La FK compuesta impide asociarla a un tema de otro examen.
+  temaId            String?
+  texto             String       @db.Text
+  // Rango 0..10 garantizado además por un CHECK constraint en la migración.
+  puntaje           Float
+  orden             Int
+  tipo              TipoConsigna @default(DESARROLLO)
+  // Opciones para OPCION_MULTIPLE / VERDADERO_FALSO (vacío en los demás tipos).
+  opciones          String[]     @default([])
+  // Índice (base 0) de la opción correcta en `opciones`.
+  respuestaCorrecta Int?
+  // Respuesta esperada o criterio de corrección (solo visible para el profesor).
+  criterio          String?      @db.Text
+
+  examen     Examen      @relation(fields: [examenId], references: [id], onDelete: Cascade)
+  tema       Tema?       @relation(fields: [temaId, examenId], references: [id, examenId], onDelete: Cascade)
+  respuestas Respuesta[]
+
+  // `orden` es correlativo en todo el examen; dentro de cada tema se numera por posición.
+  @@unique([examenId, orden])
+  @@index([temaId])
+}
+
+// LEGADO: asignación individual alumno por alumno (modelo anterior a las clases).
+// Ya no se usa para dar acceso: se conserva solo como histórico de los datos migrados.
+model AsignacionExamen {
+  id        String   @id @default(cuid())
+  examenId  String
+  alumnoId  String
+  createdAt DateTime @default(now())
+
+  examen Examen  @relation(fields: [examenId], references: [id], onDelete: Cascade)
+  alumno Usuario @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+
+  @@unique([examenId, alumnoId])
+  @@index([alumnoId])
+}
+
+// Entrega individual: ALUMNO → EXAMEN (→ TEMA elegido en exámenes POR_TEMAS).
+// Ciclo: EN_CURSO (tema elegido / comenzado) → ENTREGADO → EN_CORRECCION → CORREGIDO.
+model Entrega {
+  id              String        @id @default(cuid())
+  examenId        String
+  alumnoId        String
+  // Tema elegido (solo POR_TEMAS). Se puede cambiar mientras fechaInicio sea null.
+  temaId          String?
+  // Momento en que el alumno comenzó a resolver: desde ahí el tema queda bloqueado.
+  fechaInicio     DateTime?
+  // null mientras está EN_CURSO (CHECK constraint en la migración).
+  fechaEntrega    DateTime?     @default(now())
+  estado          EstadoEntrega @default(ENTREGADO)
+  // Archivo .ggb de GeoGebra codificado en base64 (null si no se usó).
+  geogebraState   String?       @db.Text
+  // Corrección: la nota total se calcula sumando Respuesta.puntajeObtenido.
+  notaTotal       Float?
+  feedbackGeneral String?       @db.Text
+  fechaCorreccion DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  examen     Examen      @relation(fields: [examenId], references: [id], onDelete: Restrict)
+  alumno     Usuario     @relation(fields: [alumnoId], references: [id], onDelete: Restrict)
+  tema       Tema?       @relation(fields: [temaId, examenId], references: [id, examenId], onDelete: Restrict)
+  respuestas Respuesta[]
+
+  // Una única entrega por alumno y examen: evita el doble envío y elegir/entregar dos temas.
+  @@unique([examenId, alumnoId])
+  @@index([alumnoId])
+  @@index([temaId])
+}
+
+model Respuesta {
+  id                 String @id @default(cuid())
+  entregaId          String
+  consignaId         String
+  texto              String @db.Text
+  // Respuesta según el tipo de consigna.
+  opcionSeleccionada Int?
+  // Estructura completa del diagrama ({ version, shapes, connections }), no una imagen.
+  diagrama           Json?
+
+  // Sugerencia de corrección (automática hoy, IA en el futuro). Nunca es la nota final.
+  puntajeSugerido   Float?
+  fuenteSugerencia  FuenteSugerencia?
+  sugerenciaDetalle String?           @db.Text
+  // Decisión del profesor.
+  puntajeObtenido   Float?
+  feedback          String?           @db.Text
+
+  entrega  Entrega  @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+  consigna Consigna @relation(fields: [consignaId], references: [id], onDelete: Restrict)
+
+  @@unique([entregaId, consignaId])
+  @@index([consignaId])
+}

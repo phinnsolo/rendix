@@ -1,0 +1,7 @@
+/* Punto de entrada de estilos: tokens → base → componentes → shell → vistas → clases y temas. */
+@import "./styles/tokens.css";
+@import "./styles/base.css";
+@import "./styles/components.css";
+@import "./styles/shell.css";
+@import "./styles/features.css";
+@import "./styles/clases.css";

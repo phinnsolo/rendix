@@ -1,0 +1,108 @@
+/* ==========================================================================
+   Design tokens — "Cuaderno de cátedra" (dirección editorial académica)
+   Papel, tinta y reglas finas. Toda la UI consume estas variables.
+   ========================================================================== */
+
+:root {
+  /* Paleta base */
+  --color-sand: #c8c5c0;
+  --color-taupe: #8b8177;
+  --color-slate: #677689;
+  --color-indigo: #354173;
+  --color-navy: #121d2f;
+
+  /* Papel */
+  --background: #f3f0ea; /* papel */
+  --surface: #faf8f4; /* hoja apoyada sobre el papel */
+  --surface-secondary: #ebe7df; /* papel más oscuro: zonas secundarias */
+  --surface-tertiary: #e0dbd2;
+  --surface-sunken: #efebe4;
+
+  /* Tinta */
+  --text-primary: #121d2f;
+  --text-secondary: #56637a;
+  --text-tertiary: #7f8794;
+  --text-inverse: #faf8f4;
+
+  /* Reglas (líneas de imprenta) */
+  --rule: #121d2f; /* regla fuerte */
+  --border: #d9d4ca; /* regla fina */
+  --border-strong: #b9b3a8;
+  --border-active: var(--color-indigo);
+
+  /* Primario: tinta índigo */
+  --primary: #354173;
+  --primary-hover: #29345f;
+  --primary-active: #222b50;
+  --primary-soft: #e4e4ea;
+  --primary-soft-hover: #d9dae4;
+  --primary-ink: #2b3666;
+
+  /* Acento cálido: marginalia, notas al pie */
+  --accent: var(--color-taupe);
+  --accent-soft: #ebe4da;
+  --accent-ink: #6a5f54;
+
+  /* Estados (tintas apagadas) */
+  --success: #4f7d67;
+  --success-soft: #e2e9e2;
+  --success-ink: #3b5f4e;
+  --warning: #b08a4a;
+  --warning-soft: #f0e6d3;
+  --warning-ink: #7f6230;
+  --danger: #b85c5c;
+  --danger-hover: #a34d4d;
+  --danger-soft: #f3e2df;
+  --danger-ink: #933f3f;
+
+  /* Tipografía */
+  --font-display: "Fraunces Variable", "Fraunces", Georgia, serif;
+  --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-sans: var(--font-serif); /* compatibilidad: la UI base es serif */
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem; /* H3 */
+  --text-xl: 1.75rem; /* H2 */
+  --text-2xl: 2.75rem; /* H1 */
+
+  /* Esquinas casi rectas: impresión, no app */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius: 2px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+
+  /* Sin sombras: la jerarquía la dan reglas y espacio */
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: 0 1px 0 var(--border);
+  --shadow-lg: 0 18px 40px -18px rgba(18, 29, 47, 0.35);
+
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
+  --focus-ring-danger: 0 0 0 2px var(--surface), 0 0 0 4px var(--danger);
+
+  /* Movimiento */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --dur-slow: 250ms;
+
+  /* Layout */
+  --topbar-h: 48px; /* alto del índice fijo (la cabecera grande se desplaza) */
+  --content-max: 1200px;
+
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}
