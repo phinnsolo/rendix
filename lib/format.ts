@@ -55,13 +55,3 @@ export function formatNumero(n: number | null | undefined, decimales = 1): strin
   return n.toLocaleString("es-AR", { maximumFractionDigits: decimales });
 }
 
-/** "viernes, 2 de octubre de 2026" (fecha de la "edición" en la cabecera). */
-export function fechaPublicacion(fecha = new Date()): string {
-  return new Intl.DateTimeFormat("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: TZ,
-  }).format(fecha);
-}

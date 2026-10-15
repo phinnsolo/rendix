@@ -137,7 +137,7 @@ export default function ClaseDetalleVista({ clase, clases, alumnos }: Props) {
               compacto
               icon={Users}
               titulo="La clase todavía no tiene alumnos"
-              descripcion="Agregá a los alumnos de esta comisión: van a ver automáticamente los exámenes que le asignes a la clase."
+              descripcion="Agregá alumnos a esta clase."
               accion={
                 <button type="button" className="btn" onClick={() => setAgregando(true)}>
                   <UserPlus className="icon" aria-hidden />
@@ -195,7 +195,7 @@ export default function ClaseDetalleVista({ clase, clases, alumnos }: Props) {
             </Link>
           </div>
           {clase.examenes.length === 0 ? (
-            <EmptyState compacto icon={FileText} titulo="Sin exámenes asignados" descripcion="Los exámenes que asignes a esta clase van a aparecer acá." />
+            <EmptyState compacto icon={FileText} titulo="Sin exámenes asignados" />
           ) : (
             <ul className="row-list">
               {clase.examenes.map((e) => (

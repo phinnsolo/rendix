@@ -10,7 +10,6 @@ export default async function CorreccionesPage() {
     <>
       <PageHeader
         titulo="Correcciones"
-        subtitulo="Todas las entregas de tus exámenes. Las más antiguas sin corregir aparecen primero."
       />
       <BandejaCorrecciones entregas={entregas} />
     </>

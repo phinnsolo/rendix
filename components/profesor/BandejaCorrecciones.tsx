@@ -39,7 +39,6 @@ export default function BandejaCorrecciones({ entregas }: { entregas: EntregaBan
       <EmptyState
         icon={Inbox}
         titulo="Todavía no hay entregas"
-        descripcion="Cuando tus alumnos entreguen un examen publicado, vas a poder corregirlo desde acá."
       />
     );
   }
@@ -70,7 +69,7 @@ export default function BandejaCorrecciones({ entregas }: { entregas: EntregaBan
 
       {grupos.length === 0 ? (
         filtro === "pendientes" && !busqueda ? (
-          <EmptyState icon={CheckCheck} titulo="Estás al día" descripcion="No hay entregas esperando corrección." />
+          <EmptyState icon={CheckCheck} titulo="No hay entregas pendientes" />
         ) : (
           <EmptyState compacto icon={Search} titulo="Sin resultados" descripcion="No hay entregas que coincidan con el filtro." />
         )

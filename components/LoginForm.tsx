@@ -76,7 +76,7 @@ export default function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             aria-invalid={Boolean(fieldErrors.email)}
-            placeholder="nombre@institucion.edu"
+            placeholder="nombre@uade.edu.ar"
             autoFocus
           />
         </div>

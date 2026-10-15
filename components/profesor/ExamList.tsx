@@ -34,7 +34,7 @@ export default function ExamList({ examenes, filtroInicial }: { examenes: Resume
       <EmptyState
         icon={FileText}
         titulo="Todavía no creaste ningún examen"
-        descripcion="Creá el primero para comenzar a evaluar a tus alumnos."
+        descripcion="Se guarda como borrador hasta que lo publiques."
         accion={
           <Link href="/profesor/examenes/nuevo" className="btn">
             <Plus className="icon" aria-hidden />

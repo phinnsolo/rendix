@@ -40,19 +40,14 @@ export default async function AlumnoDashboard() {
         subtitulo={
           pendientes.length > 0
             ? `Tenés ${plural(pendientes.length, "examen pendiente", "exámenes pendientes")} para rendir.`
-            : "No tenés exámenes pendientes. ¡Buen trabajo!"
+            : "No tenés exámenes pendientes."
         }
       />
 
       {examenes.length === 0 ? (
         <EmptyState
           icon={clase ? BookOpen : School}
-          titulo={clase ? "No tenés exámenes publicados por el momento" : "Todavía no pertenecés a ninguna clase"}
-          descripcion={
-            clase
-              ? `Cuando se publique un examen para ${clase.nombre}, va a aparecer acá.`
-              : "Cuando un profesor te agregue a su clase, vas a ver acá los exámenes asignados a esa clase."
-          }
+          titulo={clase ? "No hay exámenes publicados" : "Todavía no estás en ninguna clase"}
         />
       ) : (
         <div className="stack-lg">
@@ -63,7 +58,7 @@ export default async function AlumnoDashboard() {
               </h2>
             </div>
             {pendientes.length === 0 ? (
-              <EmptyState compacto icon={CircleCheck} titulo="Estás al día" descripcion="Entregaste todos los exámenes de tu clase." />
+              <EmptyState compacto icon={CircleCheck} titulo="No tenés exámenes pendientes" />
             ) : (
               <div className="exam-tiles">
                 {pendientes.map((e) => {

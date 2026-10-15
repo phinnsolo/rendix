@@ -28,7 +28,7 @@ export default function ClasesLista({ clases }: { clases: ClaseResumen[] }) {
       <EmptyState
         icon={School}
         titulo="Todavía no tenés clases"
-        descripcion="Creá una clase (por ejemplo, una comisión), agregale sus alumnos y después asignale exámenes: todos sus alumnos los van a ver."
+        descripcion="Creá una clase y agregale alumnos."
         accion={<CrearClaseButton />}
       />
     );

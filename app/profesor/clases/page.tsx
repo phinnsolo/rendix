@@ -10,7 +10,6 @@ export default async function ClasesPage() {
     <>
       <PageHeader
         titulo="Clases"
-        subtitulo="Tus comisiones y sus alumnos. Cada examen se asigna a una clase: lo ven todos sus alumnos."
         acciones={clases.length > 0 ? <CrearClaseButton /> : undefined}
       />
       <ClasesLista clases={clases} />

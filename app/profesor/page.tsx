@@ -28,7 +28,6 @@ export default async function ProfesorDashboard() {
     <div className="front-page">
       <header className="front-head">
         <div>
-          <span className="eyebrow">Portada</span>
           <h1 className="front-title">
             {saludo()},<br />
             <em>{primerNombre}.</em>
@@ -37,7 +36,7 @@ export default async function ProfesorDashboard() {
         <div className="front-head-side">
           <p className="front-lead">
             {examenes.length === 0 ? (
-              "Todavía no hay exámenes en tu cuaderno. Empezá por el primero."
+              "Todavía no creaste exámenes."
             ) : (
               <>
                 Tenés <strong>{plural(activos.length, "examen activo", "exámenes activos")}</strong> y{" "}
@@ -56,7 +55,7 @@ export default async function ProfesorDashboard() {
         <EmptyState
           icon={FileText}
           titulo="Todavía no creaste ningún examen."
-          descripcion="Creá el primero para comenzar a evaluar a tus alumnos. Se guarda como borrador hasta que lo publiques."
+          descripcion="Se guarda como borrador hasta que lo publiques."
           accion={
             <Link href="/profesor/examenes/nuevo" className="btn">
               <Plus className="icon" aria-hidden />
@@ -117,7 +116,7 @@ export default async function ProfesorDashboard() {
                     0
                   </div>
                   <p className="front-story-kicker">
-                    Estás al día. <span className="muted">No hay entregas esperando corrección.</span>
+                    No hay entregas pendientes.
                   </p>
                 </div>
               )}
@@ -125,7 +124,7 @@ export default async function ProfesorDashboard() {
 
             <aside className="front-figures" aria-labelledby="cifras-titulo">
               <h2 className="section-title" id="cifras-titulo">
-                En cifras
+                Resumen
               </h2>
               <dl className="figures">
                 <div>
@@ -155,9 +154,6 @@ export default async function ProfesorDashboard() {
                   <dd className="tabular">{evaluados}</dd>
                 </div>
               </dl>
-              <p className="footnote">
-                <sup>*</sup> Alumnos con al menos una corrección finalizada.
-              </p>
             </aside>
           </div>
 
@@ -171,7 +167,7 @@ export default async function ProfesorDashboard() {
               </Link>
             </div>
             {activos.length === 0 ? (
-              <p className="muted italic">No hay exámenes publicados en curso.</p>
+              <p className="muted">No hay exámenes en curso.</p>
             ) : (
               <ol className="toc">
                 {activos.map((e, i) => (
@@ -205,7 +201,7 @@ export default async function ProfesorDashboard() {
                 Borradores <span className="count">{borradores.length}</span>
               </h2>
               {borradores.length === 0 ? (
-                <p className="muted italic">No tenés borradores pendientes de publicar.</p>
+                <p className="muted">No hay borradores.</p>
               ) : (
                 <ul className="brief-list">
                   {borradores.slice(0, 4).map((e) => (
@@ -224,7 +220,7 @@ export default async function ProfesorDashboard() {
                 Últimas entregas
               </h2>
               {recientes.length === 0 ? (
-                <p className="muted italic">Todavía no recibiste entregas.</p>
+                <p className="muted">Todavía no hay entregas.</p>
               ) : (
                 <ul className="brief-list">
                   {recientes.map((e) => (

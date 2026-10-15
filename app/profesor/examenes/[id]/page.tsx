@@ -152,7 +152,6 @@ export default async function ExamenProfesorPage({ params, searchParams }: Props
                 <h2 className="section-title" id="titulo-temas">
                   Temas <span className="count">{temas.length}</span>
                 </h2>
-                <span className="small muted">Cada alumno elige uno y responde solo sus preguntas</span>
               </div>
               <div className="stack-lg">
                 {temas.map((t) => (

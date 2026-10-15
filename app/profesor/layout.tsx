@@ -1,17 +1,13 @@
-import { cookies } from "next/headers";
 import AppShell from "@/components/shell/AppShell";
-import { fechaPublicacion } from "@/lib/format";
 import { requireRole } from "@/lib/session";
 import { contarPendientesCorreccion } from "@/lib/services/panel";
 
 export default async function ProfesorLayout({ children }: { children: React.ReactNode }) {
   const user = await requireRole("PROFESOR");
-  const [store, pendientes] = await Promise.all([cookies(), contarPendientesCorreccion(user)]);
+  const pendientes = await contarPendientesCorreccion(user);
   return (
     <AppShell
       user={user}
-      fecha={fechaPublicacion()}
-      colapsadoInicial={store.get("ui-cabecera")?.value === "compacta"}
       badges={{ correcciones: pendientes }}
       notificaciones={
         pendientes > 0

@@ -94,7 +94,7 @@ export default function PreparacionExamen({ examen }: { examen: ExamenAPreparar 
           volver={{ href: "/alumno", label: "Mis exámenes" }}
           eyebrow={examen.clase ?? "Examen por temas"}
           titulo="Elegí un tema"
-          subtitulo={`${examen.titulo}. Para este examen tenés que seleccionar uno de los siguientes temas. Una vez seleccionado, responderás únicamente las preguntas correspondientes a ese tema.`}
+          subtitulo={`${examen.titulo}. Respondés solo las preguntas del tema que elijas.`}
         />
         {avisoError}
         <TemaCards temas={examen.temas} seleccionado={examen.tema?.id} onElegir={setAConfirmar} deshabilitado={procesando} />

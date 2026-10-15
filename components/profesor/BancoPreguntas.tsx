@@ -35,7 +35,6 @@ export default function BancoPreguntas({ preguntas }: { preguntas: PreguntaBanco
       <EmptyState
         icon={ListChecks}
         titulo="Todavía no hay preguntas"
-        descripcion="Las preguntas que agregues a tus exámenes van a aparecer acá."
         accion={
           <Link href="/profesor/examenes/nuevo" className="btn">
             Crear examen

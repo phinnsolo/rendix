@@ -12,7 +12,6 @@ export default async function ExamenesPage({ searchParams }: { searchParams: Pro
     <>
       <PageHeader
         titulo="Exámenes"
-        subtitulo="Todos tus exámenes: borradores, publicados y su estado de corrección."
         acciones={
           <Link href="/profesor/examenes/nuevo" className="btn">
             <Plus className="icon" aria-hidden />

@@ -38,7 +38,6 @@ export default function ListaAlumnos({ alumnos }: { alumnos: AlumnoResumen[] }) 
       <EmptyState
         icon={Users}
         titulo="No hay alumnos para mostrar"
-        descripcion="Los alumnos los da de alta la institución. Acá aparecen los de tus clases y los que todavía no tienen clase."
       />
     );
   }

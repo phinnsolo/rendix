@@ -75,8 +75,8 @@ export default async function ExamenAlumnoPage({ params, searchParams }: Props) 
         <div className="alert alert-success" role="status">
           <CircleCheck className="icon" aria-hidden />
           <div className="alert-body">
-            <span className="alert-title">¡Examen entregado correctamente!</span>
-            Tus respuestas quedaron registradas. Esta es una copia de solo lectura.
+            <span className="alert-title">Examen entregado</span>
+            Tus respuestas quedaron registradas.
           </div>
         </div>
       ) : (

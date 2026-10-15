@@ -8,7 +8,7 @@ export default async function AlumnosPage() {
   const alumnos = await alumnosConResumen(user);
   return (
     <>
-      <PageHeader titulo="Alumnos" subtitulo="Alumnos de tus clases y sin clase asignada: actividad, promedio y pendientes. Para agregarlos o moverlos, entrá a la clase." />
+      <PageHeader titulo="Alumnos" />
       <ListaAlumnos alumnos={alumnos} />
     </>
   );

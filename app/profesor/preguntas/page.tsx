@@ -10,7 +10,6 @@ export default async function PreguntasPage() {
     <>
       <PageHeader
         titulo="Preguntas"
-        subtitulo="Todas las preguntas de tus exámenes en un solo lugar, con su rendimiento en las correcciones."
       />
       <BancoPreguntas preguntas={preguntas} />
     </>

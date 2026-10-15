@@ -66,7 +66,6 @@ export default function ClaseFormModal({ abierto, onCerrar, clase }: Props) {
     <Modal
       abierto={abierto}
       titulo={clase ? "Editar clase" : "Crear clase"}
-      descripcion={clase ? undefined : "Después de crearla vas a poder agregar a sus alumnos."}
       icono={School}
       cerrable={!guardando}
       onCerrar={onCerrar}

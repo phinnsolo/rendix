@@ -18,11 +18,11 @@ export default async function ResultadosPage({ searchParams }: { searchParams: P
   if (publicados.length === 0) {
     return (
       <>
-        <PageHeader titulo="Resultados" subtitulo="Rendimiento de tus exámenes una vez corregidos." />
+        <PageHeader titulo="Resultados" />
         <EmptyState
           icon={ChartColumn}
           titulo="Todavía no hay resultados"
-          descripcion="Publicá un examen y corregí las entregas para ver promedios, aprobados y las preguntas más difíciles."
+          descripcion="Aparecen cuando hay entregas corregidas."
           accion={
             <Link href="/profesor/examenes" className="btn btn-secondary">
               Ir a exámenes
@@ -46,7 +46,7 @@ export default async function ResultadosPage({ searchParams }: { searchParams: P
     <>
       <PageHeader
         titulo="Resultados"
-        subtitulo={`Aprobado: al menos ${Math.round(UMBRAL_APROBACION * 100)}% del puntaje. Se consideran las entregas con corrección finalizada.${r.escalaSobre10 ? " En exámenes por temas las notas se expresan sobre 10." : ""}`}
+        subtitulo={`Aprobado: ${Math.round(UMBRAL_APROBACION * 100)}% del puntaje o más. Solo entregas corregidas.${r.escalaSobre10 ? " Notas sobre 10." : ""}`}
         acciones={<SelectorExamen opciones={publicados.map((e) => ({ id: e.id, titulo: e.titulo }))} valor={elegidoId} />}
       />
 

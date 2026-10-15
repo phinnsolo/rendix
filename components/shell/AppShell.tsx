@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -72,16 +73,12 @@ function migas(pathname: string, rol: Rol): Miga[] {
 
 interface Props {
   user: { nombre: string; email: string; rol: Rol };
-  /** Cabecera compacta: oculta el encabezado grande y deja solo el índice. */
-  colapsadoInicial: boolean;
   badges?: { correcciones?: number };
   notificaciones: { texto: string; href: string }[];
-  /** Fecha renderizada en el servidor (evita diferencias de hidratación). */
-  fecha: string;
   children: ReactNode;
 }
 
-export default function AppShell({ user, colapsadoInicial, badges = {}, notificaciones, fecha, children }: Props) {
+export default function AppShell({ user, badges = {}, notificaciones, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [indiceAbierto, setIndiceAbierto] = useState(false);
@@ -111,7 +108,6 @@ export default function AppShell({ user, colapsadoInicial, badges = {}, notifica
     item.exacto ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
   const breadcrumb = migas(pathname, user.rol);
   const base = user.rol === "PROFESOR" ? "/profesor" : "/alumno";
-  const rolLabel = user.rol === "PROFESOR" ? "Profesora / Profesor" : "Alumna / Alumno";
 
   const menuUsuario: DropdownItem[] = [
     { tipo: "titulo", label: user.email },
@@ -125,33 +121,17 @@ export default function AppShell({ user, colapsadoInicial, badges = {}, notifica
       : [{ tipo: "titulo", label: "Sin avisos nuevos" }];
 
   return (
-    <div className={`publication${colapsadoInicial ? " is-compact" : ""}`}>
+    <div className="publication">
       <a href="#contenido" className="sr-only">
         Saltar al contenido
       </a>
 
-      {/* ---------- Cabecera tipo revista (se desplaza con la página) ---------- */}
-      {!colapsadoInicial && (
-        <header className="masthead">
-          <div className="masthead-inner">
-            <p className="masthead-side mono">{fecha}</p>
-            <Link href={base} className="masthead-title">
-              Exámenes <em>Online</em>
-            </Link>
-            <p className="masthead-side is-right mono">
-              {user.nombre}
-              <span>{rolLabel}</span>
-            </p>
-          </div>
-          <p className="masthead-motto">Cuaderno de cátedra · evaluación y corrección</p>
-        </header>
-      )}
-
-      {/* ---------- Índice fijo ---------- */}
+      {/* ---------- Barra superior ---------- */}
       <nav className="index-bar" aria-label="Índice">
         <div className="index-inner">
-          <Link href={base} className="index-mark" aria-label="Exámenes Online — inicio">
-            E<em>o</em>
+          <Link href={base} className="index-mark" aria-label="Exámenes Online UADE, inicio">
+            <Image src="/uade-wordmark.png" alt="UADE" width={387} height={127} className="index-logo" priority />
+            <span className="index-app">Exámenes Online</span>
           </Link>
           <ol className="index-list">
             {items.map((item) => {
@@ -236,20 +216,21 @@ export default function AppShell({ user, colapsadoInicial, badges = {}, notifica
       )}
 
       <main id="contenido" className="app-content" key={pathname}>
-        <nav className="running-head" aria-label="Ubicación">
-          <span aria-hidden>§</span>
-          <ol>
-            {breadcrumb.map((m, i) => (
-              <li key={i}>
-                {m.href ? (
-                  <Link href={m.href}>{m.label}</Link>
-                ) : (
-                  <span aria-current={i === breadcrumb.length - 1 ? "page" : undefined}>{m.label}</span>
-                )}
-              </li>
-            ))}
-          </ol>
-        </nav>
+        {breadcrumb.length > 1 && (
+          <nav className="running-head" aria-label="Ubicación">
+            <ol>
+              {breadcrumb.map((m, i) => (
+                <li key={i}>
+                  {m.href ? (
+                    <Link href={m.href}>{m.label}</Link>
+                  ) : (
+                    <span aria-current={i === breadcrumb.length - 1 ? "page" : undefined}>{m.label}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
         {children}
       </main>
     </div>

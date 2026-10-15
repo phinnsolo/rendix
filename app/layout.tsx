@@ -9,8 +9,8 @@ import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata: Metadata = {
-  title: "Exámenes Online",
-  description: "Espacio de trabajo para crear, rendir y corregir exámenes.",
+  title: "Exámenes Online | UADE",
+  description: "Exámenes online de UADE.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

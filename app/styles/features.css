@@ -1561,21 +1561,14 @@
   color: var(--text-tertiary);
 }
 
-/* Sugerencia: nota al pie marcada con ✦ — el profesor decide */
+/* Sugerencia de corrección: el profesor decide */
 .suggestion {
   position: relative;
-  padding: 0.9rem 0 0.9rem 1.6rem;
+  padding: 0.9rem 0 0.9rem 1rem;
+  border-left: 2px solid var(--border-strong);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
-}
-.suggestion::before {
-  content: "✦";
-  position: absolute;
-  left: 0;
-  top: 0.85rem;
-  color: var(--color-taupe);
-  font-size: 1rem;
 }
 .suggestion-head {
   display: flex;
