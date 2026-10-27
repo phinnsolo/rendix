@@ -8,6 +8,7 @@ export const ESTADO_ALUMNO = {
   'en-linea': { label: 'En línea', className: 'chip pending' },
   desconectado: { label: 'Desconectado', className: 'chip incorrect' },
   entregado: { label: 'Entregado', className: 'chip published' },
+  'entregado-tiempo': { label: 'Entregado por tiempo', className: 'chip published' },
   'entregado-sistema': { label: 'Entregado por sistema', className: 'chip published' },
   'no-completo': { label: 'No completó', className: 'chip incorrect' },
 }
@@ -17,7 +18,8 @@ export const SEGUIMIENTO_MS = 2000
 const DESCONECTADO_MS = 12_000
 
 export function estadoAlumno({ sesion, entrega }, estadoDelTurno, ahora) {
-  if (entrega) return entrega.enviadoPorSistema ? 'entregado-sistema' : 'entregado'
+  // Por tiempo: se envió solo al llegar a cero. Por sistema: lo entregó el servidor (el alumno estaba desconectado).
+  if (entrega) return entrega.enviadoPorSistema ? 'entregado-sistema' : entrega.enviadoPorTiempo ? 'entregado-tiempo' : 'entregado'
   if (!sesion) return estadoDelTurno === 'finalizado' ? 'no-completo' : 'no-abrio'
   if (sesion.estado !== 'en-curso') return 'entregado-sistema'
   return ahora - Date.parse(sesion.ultimoLatido) > DESCONECTADO_MS ? 'desconectado' : 'en-linea'
