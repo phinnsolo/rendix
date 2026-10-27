@@ -12,7 +12,7 @@ import { TEMAS } from '../src/config.js'
 import { validateClase } from '../src/clases.js'
 import { validateRegistro } from '../src/registro.js'
 import { BLOCK_TYPES, textFromBlocks, validateBlocks } from '../src/documentBlocks.js'
-import { getDuracion, getHerramientas, isValidDuracion } from '../src/examSettings.js'
+import { getDuracion, getHerramientas, isValidDuracion, validateTitulo } from '../src/examSettings.js'
 import {
   aplicarAsignacion, aplicarBorrarVacios, aplicarCambioAlumnos, aplicarHorarios, aplicarQuitarAlumno, estadoTurno, hasStarted,
   nuevoTurnoAhora, turnoFin, validateHorario,
@@ -219,7 +219,8 @@ async function documentoPropio(client, id, profesor, { bloquear = false } = {}) 
 async function validarDocumento(client, body, profesor) {
   const { rows: [clase] } = await client.query('select * from clases where id = $1', [String(body.claseId ?? '')])
   if (!clase || !clase.profesores.includes(profesor)) throw new HttpError(400, 'Elegí una clase.')
-  if (!esTexto(body.titulo, 200) || !body.titulo.trim()) throw new HttpError(400, 'El título es obligatorio.')
+  const errorTitulo = validateTitulo(body.titulo)
+  if (errorTitulo) throw new HttpError(400, errorTitulo, { errores: { titulo: errorTitulo } })
   if (!TEMAS.includes(body.tema)) throw new HttpError(400, 'Elegí un tema.')
   if (!isValidDuracion(body.duracion)) throw new HttpError(400, 'La duración no es válida.')
   const bloques = body.bloques

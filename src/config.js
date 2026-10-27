@@ -9,6 +9,9 @@ export const ZONA_HORARIA_IANA = 'America/Argentina/Buenos_Aires'
 // Temas de examen disponibles. Para agregar o quitar temas, editar esta lista.
 export const TEMAS = ['Tema 1', 'Tema 2', 'Tema 3']
 
+// Largo máximo del título de un parcial, en caracteres.
+export const TITULO_MAXIMO = 100
+
 // Duración del parcial en minutos (la elige el profesor al crearlo).
 export const DURACION_MAXIMA = 120
 export const DURACION_POR_DEFECTO = 60

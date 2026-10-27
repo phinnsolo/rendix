@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { getSession } from '../auth.js'
 import { getClase, getClasesDe } from '../clasesStore.js'
 import { createBlock, getBlocks, validateBlocks } from '../documentBlocks.js'
-import { DURACION_MAXIMA, DURACION_POR_DEFECTO, TEMAS } from '../config.js'
-import { getDuracion, getHerramientas, getTema, isValidDuracion } from '../examSettings.js'
+import { DURACION_MAXIMA, DURACION_POR_DEFECTO, TEMAS, TITULO_MAXIMO } from '../config.js'
+import { getDuracion, getHerramientas, getTema, isValidDuracion, validateTitulo } from '../examSettings.js'
 import { hasStarted, validateHorario } from '../turnosStore.js'
 import DurationField from './DurationField.jsx'
 import HorariosField, { nuevoHorario } from './HorariosField.jsx'
@@ -83,6 +83,7 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
   }
 
   const [enviando, setEnviando] = useState(false)
+  const [errorTitulo, setErrorTitulo] = useState('')
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -90,8 +91,10 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
       setError('Elegí una clase.')
       return
     }
-    if (!titulo.trim()) {
-      setError('El título es obligatorio.')
+    const mensajeTitulo = validateTitulo(titulo)
+    setErrorTitulo(mensajeTitulo ?? '')
+    if (mensajeTitulo) {
+      setError(mensajeTitulo)
       return
     }
     if (!tema) {
@@ -136,6 +139,7 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
           .map(({ id, turno, fecha, horaInicio }) => ({ id, turno, fecha, horaInicio })),
       })
     } catch (e) {
+      if (e.errores?.titulo) setErrorTitulo(e.errores.titulo)
       setError(`No se pudo guardar. ${e.message}`)
       setEnviando(false)
     }
@@ -157,7 +161,19 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
         </label>
         <label>
           Título
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
+          <input
+            value={titulo}
+            onChange={(e) => {
+              setTitulo(e.target.value)
+              setErrorTitulo('')
+            }}
+            maxLength={TITULO_MAXIMO}
+            aria-invalid={errorTitulo ? true : undefined}
+            autoFocus
+          />
+          {errorTitulo
+            ? <span className="field-error">{errorTitulo}</span>
+            : <span className="muted hint">{titulo.length}/{TITULO_MAXIMO}</span>}
         </label>
         <TopicSelector value={tema} onChange={setTema} />
         <DurationField value={duracion} onChange={setDuracion} disabled={duracionBloqueada} />
