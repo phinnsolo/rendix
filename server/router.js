@@ -43,9 +43,21 @@ export async function handle(req, res) {
     enviar(res, 200, resultado ?? {})
   } catch (e) {
     if (e instanceof HttpError) return enviar(res, e.status, { error: e.message, ...e.extra })
-    console.error(e)
+    logError(req, e)
     enviar(res, 500, { error: 'Error del servidor. Probá de nuevo.' })
   }
+}
+
+// Log de un error inesperado (lo muestran los logs de Vercel). Incluye el código (ej. ECONNREFUSED, o el SQLSTATE
+// de Postgres) y los errores internos de un AggregateError, que es lo que lanza `pg` cuando no puede conectarse
+// y que suele venir con el mensaje vacío. No incluye el body ni los headers del pedido.
+function logError(req, e) {
+  const internos = Array.isArray(e?.errors) ? e.errors : []
+  console.error(
+    `[api] ${req.method} ${req.url} → ${e?.name ?? 'Error'}${e?.code ? ` (${e.code})` : ''}: ${e?.message || '(sin mensaje)'}`,
+    `\n${e?.stack ?? ''}`,
+    ...internos.map((i) => `\n  causa: ${i?.code ? `(${i.code}) ` : ''}${i?.message ?? i}`)
+  )
 }
 
 function validacion(errores) {
