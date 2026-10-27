@@ -18,7 +18,6 @@ const hora = (iso) => new Date(iso).toLocaleTimeString('es-AR', { timeZone: ZONA
 // y quién tiene cambios sin sincronizar. Se pide al servidor cada 2 s; el tiempo corre con la hora del servidor.
 export default function MonitoreoPage() {
   const [turnos, setTurnos] = useState(null)
-  const [ultimaRespuesta, setUltimaRespuesta] = useState(null)
   const [sinConexion, setSinConexion] = useState(false)
   const [ahora, setAhora] = useState(now)
 
@@ -26,7 +25,6 @@ export default function MonitoreoPage() {
     getMonitoreo().then(
       (datos) => {
         setTurnos(datos.turnos)
-        setUltimaRespuesta(now())
         setSinConexion(false)
       },
       () => setSinConexion(true)
@@ -54,15 +52,16 @@ export default function MonitoreoPage() {
           <Link to="/documentos" className="button secondary">Ir a parciales</Link>
         </div>
       ) : (
-        turnos.map((turno) => (
-          <PanelTurno key={turno.id} turno={turno} ahora={ahora} ultimaRespuesta={ultimaRespuesta} sinConexion={sinConexion} />
-        ))
+        <>
+          {sinConexion && <p className="error" role="status">Sin conexión con el servidor: los datos pueden estar desactualizados.</p>}
+          {turnos.map((turno) => <PanelTurno key={turno.id} turno={turno} ahora={ahora} />)}
+        </>
       )}
     </>
   )
 }
 
-function PanelTurno({ turno, ahora, ultimaRespuesta, sinConexion }) {
+function PanelTurno({ turno, ahora }) {
   const restante = Math.max(0, Math.ceil((turnoFin(turno).getTime() - ahora) / 1000))
   const filas = turno.alumnos
     .map((a) => ({ ...a, nombre: nombreDe(a.username), estado: estadoAlumno(a, 'en-curso', ahora) }))
@@ -92,18 +91,6 @@ function PanelTurno({ turno, ahora, ultimaRespuesta, sinConexion }) {
             <span className={`monitor-stat-value ${restante <= 60 ? 'urgent' : restante <= 600 ? 'warning' : ''}`}>
               {formatRemaining(restante)}
             </span>
-          </div>
-        </div>
-        <div className={sinConexion ? 'monitor-stat offline' : 'monitor-stat'}>
-          <IconoActualizar />
-          <div>
-            <span className="monitor-stat-label">Actualización automática</span>
-            <span className="monitor-stat-value small">
-              {sinConexion ? 'Sin conexión con el servidor' : 'cada ≤2 s'}
-            </span>
-            {ultimaRespuesta && (
-              <span className="monitor-stat-note">Último dato {haceCuanto(new Date(ultimaRespuesta).toISOString(), ahora)}</span>
-            )}
           </div>
         </div>
         <div className={pendientes > 0 ? 'monitor-stat pending' : 'monitor-stat'}>
@@ -194,10 +181,6 @@ function Icono({ children }) {
 
 function IconoReloj() {
   return <Icono><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Icono>
-}
-
-function IconoActualizar() {
-  return <Icono><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" /><path d="M4 4v4h4" /><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" /><path d="M20 20v-4h-4" /></Icono>
 }
 
 function IconoCampana() {

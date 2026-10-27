@@ -381,18 +381,16 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .monitor-head h2 a { color: var(--text); text-decoration: none; }
 .monitor-head h2 a:hover { color: var(--primary); text-decoration: underline; }
 .monitor-head p { margin: 0; }
-.monitor-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--primary-tint); }
+.monitor-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--primary-tint); }
 .monitor-stat { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.8rem 1rem; color: var(--primary); }
 .monitor-stat + .monitor-stat { border-left: 1px solid var(--border); }
 .monitor-stat > div { display: flex; flex-direction: column; min-width: 0; }
 .monitor-icon { flex: none; width: 1.9rem; height: 1.9rem; margin-top: 0.15rem; }
 .monitor-stat-label { font-size: 0.82rem; color: var(--muted); }
 .monitor-stat-value { font-size: 1.65rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--primary); }
-.monitor-stat-value.small { font-size: 1.1rem; padding-top: 0.3rem; }
 .monitor-stat-value.warning { align-self: flex-start; color: var(--highlight-text); background: var(--highlight); box-shadow: 0 0 0 0.2rem var(--highlight); border-radius: 2px; }
 .monitor-stat-value.urgent { color: var(--danger); }
 .monitor-stat-note { font-size: 0.8rem; color: var(--muted); }
-.monitor-stat.offline, .monitor-stat.offline .monitor-stat-value { color: var(--danger); }
 .monitor-stat.pending .monitor-stat-value { align-self: flex-start; padding: 0 0.35rem; color: var(--highlight-text); background: var(--highlight); border-radius: 2px; }
 .monitor .table-scroll { box-shadow: none; }
 .monitor-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
