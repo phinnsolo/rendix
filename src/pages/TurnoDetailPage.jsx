@@ -7,7 +7,7 @@ import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
 import { asignarAlumnos, estadoTurno, formatHorario, getSeguimiento, getTurno, quitarAlumno } from '../turnosStore.js'
 import { now } from '../clock.js'
-import { formatRemaining } from '../components/ExamHeader.jsx'
+import { ESTADO_ALUMNO, SEGUIMIENTO_MS, estadoAlumno } from '../seguimiento.js'
 import NotFound from '../components/NotFound.jsx'
 import BackLink from '../components/BackLink.jsx'
 
@@ -15,32 +15,6 @@ const ESTADO_TURNO = {
   proximo: { label: 'Próximo', className: 'chip' },
   'en-curso': { label: 'En curso', className: 'chip pending' },
   finalizado: { label: 'Finalizado', className: 'chip published' },
-}
-
-const ESTADO_ALUMNO = {
-  'no-abrio': { label: 'No abrió', className: 'chip' },
-  'en-linea': { label: 'En línea', className: 'chip pending' },
-  desconectado: { label: 'Desconectado', className: 'chip incorrect' },
-  entregado: { label: 'Entregado', className: 'chip published' },
-  'entregado-sistema': { label: 'Entregado por sistema', className: 'chip published' },
-  'no-completo': { label: 'No completó', className: 'chip incorrect' },
-}
-
-const SEGUIMIENTO_MS = 2000
-// Sin latido en este tiempo (el alumno late cada 5 s), se lo considera desconectado.
-const DESCONECTADO_MS = 12_000
-
-function estadoAlumno({ sesion, entrega }, estadoDelTurno, ahora) {
-  if (entrega) return entrega.enviadoPorSistema ? 'entregado-sistema' : 'entregado'
-  if (!sesion) return estadoDelTurno === 'finalizado' ? 'no-completo' : 'no-abrio'
-  if (sesion.estado !== 'en-curso') return 'entregado-sistema'
-  return ahora - Date.parse(sesion.ultimoLatido) > DESCONECTADO_MS ? 'desconectado' : 'en-linea'
-}
-
-function haceCuanto(iso, ahora) {
-  const s = Math.max(0, Math.round((ahora - Date.parse(iso)) / 1000))
-  if (s < 60) return `hace ${s} s`
-  return `hace ${Math.floor(s / 60)} min`
 }
 
 // Un turno asignado a un parcial: alumnos asignados y seguimiento de quién abrió y quién envió el examen.
@@ -83,14 +57,12 @@ export default function TurnoDetailPage() {
     .map((username) => {
       const vivo = seguimiento?.get(username) ?? { sesion: null, entrega: entregas.get(username) ?? null }
       const { sesion, entrega } = vivo
-      const enCurso = !entrega && sesion?.estado === 'en-curso'
       return {
         username,
         nombre: nombreDe(username),
         entrega,
         sesion,
         apertura: sesion?.apertura ?? entrega?.fechaInicio ?? null,
-        restante: enCurso ? Math.max(0, Math.ceil((Date.parse(sesion.deadline) - ahora) / 1000)) : null,
         estado: estadoAlumno(vivo, estado, ahora),
       }
     })
@@ -112,7 +84,10 @@ export default function TurnoDetailPage() {
   return (
     <>
       <BackLink to={`/documentos/${parcialId}`}>Volver al parcial</BackLink>
-      <h1>{doc?.titulo ?? 'Examen eliminado'}</h1>
+      <div className="page-header">
+        <h1>{doc?.titulo ?? 'Examen eliminado'}</h1>
+        {estado === 'en-curso' && <Link to="/monitoreo" className="button">Abrir monitoreo</Link>}
+      </div>
       <p className="muted small chips-line">
         <span className={ESTADO_TURNO[estado].className}>{ESTADO_TURNO[estado].label}</span>
         {formatHorario(turno)}
@@ -146,8 +121,6 @@ export default function TurnoDetailPage() {
                 <tr>
                   <th>Alumno</th>
                   <th>Estado</th>
-                  <th>Tiempo restante</th>
-                  <th>Sincronización</th>
                   <th>Apertura</th>
                   <th>Envío</th>
                   <th aria-label="Acciones" />
@@ -161,10 +134,6 @@ export default function TurnoDetailPage() {
                       <span className="muted small table-sub">{fila.username}</span>
                     </td>
                     <td><span className={ESTADO_ALUMNO[fila.estado].className}>{ESTADO_ALUMNO[fila.estado].label}</span></td>
-                    <td className={fila.restante !== null && fila.restante <= 60 ? 'num urgent' : 'num'}>
-                      {fila.restante === null ? '—' : formatRemaining(fila.restante)}
-                    </td>
-                    <td><Sincronizacion fila={fila} ahora={ahora} /></td>
                     <td>{fila.apertura ? formatDate(fila.apertura) : '—'}</td>
                     <td>{fila.entrega ? formatDate(fila.entrega.fechaEntrega) : '—'}</td>
                     <td className="table-actions">
@@ -188,14 +157,6 @@ export default function TurnoDetailPage() {
       </section>
     </>
   )
-}
-
-// Si el alumno tiene cambios sin subir (problemas de red) o cuándo se guardó lo último.
-function Sincronizacion({ fila, ahora }) {
-  if (fila.entrega || !fila.sesion) return <span className="muted">—</span>
-  if (fila.sesion.pendientes) return <span className="chip pending">Cambios pendientes</span>
-  if (!fila.sesion.ultimoGuardado) return <span className="muted small">Sin cambios guardados</span>
-  return <span className="muted small">Guardado {haceCuanto(fila.sesion.ultimoGuardado, ahora)}</span>
 }
 
 // Buscar alumnos y asignar uno o varios al turno: los de la clase del parcial o, si no tiene clase, todos

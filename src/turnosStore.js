@@ -49,6 +49,11 @@ export function getSeguimiento(id) {
   return request('GET', `/api/turnos/${id}/seguimiento`)
 }
 
+// Turnos del profesor en curso ahora, cada uno con el estado en vivo de sus alumnos (sección Monitoreo).
+export function getMonitoreo() {
+  return request('GET', '/api/monitoreo')
+}
+
 // --- Alumno (el servidor solo manda sus turnos de parciales publicados)
 
 export function getTurnosDeAlumno(alumno) {
