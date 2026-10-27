@@ -33,6 +33,15 @@ export function rangoInicio(turno, duracion) {
   return { desde: franja.inicio, hasta: aHora(hasta) }
 }
 
+// Horas de inicio posibles cada `paso` minutos dentro de rangoInicio (para elegir de una lista).
+export function horasDeInicio(turno, duracion, paso = 15) {
+  const rango = rangoInicio(turno, duracion)
+  if (!rango) return []
+  const horas = []
+  for (let m = aMinutos(rango.desde); m <= aMinutos(rango.hasta); m += paso) horas.push(aHora(m))
+  return horas
+}
+
 // Los turnos creados antes de los turnos fijos tenían un nombre propio.
 export function nombreTurno(turno) {
   return TURNOS[turno.turno]?.nombre ?? turno.nombre
@@ -107,8 +116,10 @@ export function validateHorario({ turno, fecha, horaInicio }, duracion, ahora = 
   const franja = TURNOS[turno]
   if (!rango) {
     errores.horaInicio = `Un parcial de ${duracion} min no entra en el ${franja.nombre.toLowerCase()} (${franja.inicio} a ${franja.fin}).`
-  } else if (!horaInicio || !/^\d{2}:\d{2}$/.test(horaInicio)) {
+  } else if (!horaInicio) {
     errores.horaInicio = 'La hora de inicio es obligatoria.'
+  } else if (!/^\d{2}:\d{2}$/.test(horaInicio)) {
+    errores.horaInicio = 'Escribí la hora como HH:MM, por ejemplo 08:30.'
   } else if (horaInicio < rango.desde || horaInicio > rango.hasta) {
     errores.horaInicio =
       `Con ${duracion} min, en el ${franja.nombre.toLowerCase()} (${franja.inicio} a ${franja.fin}) ` +

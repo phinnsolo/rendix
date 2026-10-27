@@ -1,12 +1,21 @@
 import { TURNOS } from '../config.js'
 import { isValidDuracion } from '../examSettings.js'
 import { formatHorario, rangoInicio, sumarMinutos, validateHorario } from '../turnosStore.js'
-import { fechaHoraLocal } from '../turnos.js'
+import { fechaHoraLocal, horasDeInicio, instante } from '../turnos.js'
 import { now } from '../clock.js'
 
 // Fecha de hoy en la zona horaria de la app, como la usa <input type="date">.
 function hoy() {
   return fechaHoraLocal(now()).fecha
+}
+
+const HORA = /^\d{2}:\d{2}$/
+
+// '8:30', '8.30' o '830' → '08:30'. Si no se entiende, la deja como está (la validación avisa).
+function normalizarHora(texto) {
+  const m = texto.trim().match(/^(\d{1,2})[:.]?(\d{2})$/)
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return texto.trim()
+  return `${m[1].padStart(2, '0')}:${m[2]}`
 }
 
 export function nuevoHorario(turno = '') {
@@ -39,15 +48,18 @@ export default function HorariosField({ value, onChange, duracion, errores = [],
         }
         const conDuracion = isValidDuracion(duracion)
         const rango = rangoInicio(h.turno, duracion)
+        // Opciones de la lista: cada 15 min dentro del rango; si el día es hoy, solo las que todavía no pasaron.
+        const opciones = horasDeInicio(h.turno, duracion).filter((hora) => !h.fecha || instante(h.fecha, hora).getTime() > now())
         const habilitada = rango !== null
-        // Mientras se completa, se avisa en vivo si la hora elegida se pasa del turno o si la duración no entra.
-        const enVivo = conDuracion && h.turno && (h.horaInicio || !rango) ? validateHorario(h, duracion).horaInicio : null
+        // Mientras se completa, se avisa en vivo si la hora elegida se pasa del turno o si la duración no entra
+        // (el formato recién se controla al guardar, para no marcar error mientras se escribe).
+        const enVivo = conDuracion && h.turno && (HORA.test(h.horaInicio) || !rango) ? validateHorario(h, duracion).horaInicio : null
         const error = errores[index] ?? {}
         const errorInicio = error.horaInicio ?? enVivo
         let hint
         if (!conDuracion) hint = 'Indicá primero la duración del parcial.'
         else if (!h.turno) hint = 'Elegí primero el turno.'
-        else if (h.horaInicio) hint = `Termina a las ${sumarMinutos(h.horaInicio, duracion)}.`
+        else if (HORA.test(h.horaInicio)) hint = `Termina a las ${sumarMinutos(h.horaInicio, duracion)}.`
         else hint = `Entre las ${rango.desde} y las ${rango.hasta}.`
 
         return (
@@ -80,15 +92,21 @@ export default function HorariosField({ value, onChange, duracion, errores = [],
               </label>
               <label>
                 Hora de inicio
+                {/* Un solo campo: se escribe la hora o se elige de la lista que despliega (cada 15 min). */}
                 <input
-                  type="time"
-                  min={rango?.desde}
-                  max={rango?.hasta}
+                  type="text"
+                  list={`horas-${h.key}`}
+                  placeholder={habilitada ? `Ej: ${rango.desde}` : 'HH:MM'}
+                  autoComplete="off"
                   value={h.horaInicio}
                   disabled={!habilitada}
                   onChange={(e) => update(h.key, { horaInicio: e.target.value })}
+                  onBlur={(e) => update(h.key, { horaInicio: normalizarHora(e.target.value) })}
                   aria-invalid={errorInicio ? true : undefined}
                 />
+                <datalist id={`horas-${h.key}`}>
+                  {opciones.map((hora) => <option key={hora} value={hora} />)}
+                </datalist>
                 {errorInicio
                   ? <span className="field-error">{errorInicio}</span>
                   : hint && <span className="muted hint">{hint}</span>}
