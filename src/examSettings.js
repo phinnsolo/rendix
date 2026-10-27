@@ -1,7 +1,14 @@
 // Configuración de examen de un documento (tema, herramientas permitidas y duración), con valores
 // por defecto para los documentos creados antes de que existieran estos campos.
 
-import { DURACION_MAXIMA, HERRAMIENTAS } from './config.js'
+import { DURACION_MAXIMA, HERRAMIENTAS, TITULO_MAXIMO } from './config.js'
+
+// Mensaje de error del título de un parcial, o null si es válido. Lo usan el formulario y la API.
+export function validateTitulo(titulo) {
+  if (typeof titulo !== 'string' || !titulo.trim()) return 'El título es obligatorio.'
+  if (titulo.trim().length > TITULO_MAXIMO) return `El título puede tener hasta ${TITULO_MAXIMO} caracteres.`
+  return null
+}
 
 export function getTema(doc) {
   return doc?.tema ?? ''

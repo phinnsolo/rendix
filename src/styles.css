@@ -151,6 +151,10 @@ h1 + .back-link { display: flex; width: fit-content; }
 .doc-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
 .doc-list li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .doc-title { font-weight: 700; font-size: 1.08rem; }
+/* Un título largo sin espacios se corta donde haga falta y no empuja las acciones fuera de la pantalla. */
+h1, h2, h3, .doc-title, .doc-list li { overflow-wrap: anywhere; }
+.page-header h1, .monitor-head h2, .student-exam-main > * { min-width: 0; }
+.doc-list li:not(.student-exam) > :first-child { flex: 1 1 16rem; min-width: 0; }
 a.doc-title { color: var(--text); text-decoration: none; }
 a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 
