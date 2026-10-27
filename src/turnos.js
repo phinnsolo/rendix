@@ -163,8 +163,11 @@ function conAlumnosFaltantes(turnos, parcialId, agregados, ahora) {
 
 // Turno que empieza en este momento y dura `duracion` minutos (sin pasar de la medianoche). Puede quedar
 // fuera de las franjas fijas: si la hora cae en una, usa esa; si no, se llama "Fuera de turno".
+// Las horas no tienen segundos: el inicio queda en el minuto actual y, si ya pasaron segundos de ese minuto,
+// el fin se corre un minuto para que quien abre enseguida tenga la duración completa.
 export function nuevoTurnoAhora({ profesor, parcialId, duracion }, ahora = now()) {
   const { fecha, hora: horaInicio } = fechaHoraLocal(ahora)
+  const minutos = duracion + (Math.floor(ahora / 1000) % 60 > 0 ? 1 : 0)
   const franja = Object.entries(TURNOS).find(([, t]) => horaInicio >= t.inicio && horaInicio < t.fin)?.[0] ?? null
   return {
     id: crypto.randomUUID(),
@@ -174,7 +177,7 @@ export function nuevoTurnoAhora({ profesor, parcialId, duracion }, ahora = now()
     nombre: franja ? null : 'Fuera de turno',
     fecha,
     horaInicio,
-    horaFin: aMinutos(horaInicio) + duracion >= 24 * 60 ? '23:59' : sumarMinutos(horaInicio, duracion),
+    horaFin: aMinutos(horaInicio) + minutos >= 24 * 60 ? '23:59' : sumarMinutos(horaInicio, minutos),
     alumnos: [],
   }
 }
