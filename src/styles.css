@@ -398,7 +398,6 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .monitor-table th { font-size: 0.85rem; font-weight: 700; color: var(--muted); background: var(--bg); }
 .monitor-table tbody tr:last-child td { border-bottom: none; }
 .monitor-num { font-variant-numeric: tabular-nums; }
-.monitor-num.urgent { color: var(--danger); font-weight: 700; }
 .monitor-estado { min-width: 11rem; width: 38%; }
 .monitor-estado-label { display: flex; align-items: center; gap: 0.45rem; font-weight: 700; }
 .monitor-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--state); }
