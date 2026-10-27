@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { nombreDe } from '../auth.js'
 import { formatDiaTurno, getClase, isPredefinida } from '../clasesStore.js'
 import NotFound from '../components/NotFound.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 function Integrantes({ titulo, usernames }) {
   const ordenados = [...usernames].sort((a, b) => nombreDe(a).localeCompare(nombreDe(b), 'es', { numeric: true }))
@@ -28,7 +29,7 @@ export default function ClaseDetailPage() {
 
   return (
     <>
-      <p><Link to="/dev">← Volver a clases</Link></p>
+      <BackLink to="/dev">Volver a clases</BackLink>
       <div className="page-header">
         <h1>{clase.nombre}</h1>
         <Link to={`/dev/clases/${clase.id}/editar`} className="button secondary">Editar</Link>

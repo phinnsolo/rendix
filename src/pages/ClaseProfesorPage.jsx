@@ -1,4 +1,3 @@
-import { useReducer } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { getSession } from '../auth.js'
 import { formatDiaTurno, getClase } from '../clasesStore.js'
@@ -9,6 +8,7 @@ import { alumnosLabel, estadoTurno, formatHorario, getTurnosFor, proximoTurno } 
 import NotFound from '../components/NotFound.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
 import TomarAhoraButton from '../components/TomarAhoraButton.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 const TABS = { parciales: 'Parciales', entregas: 'Entregas' }
 
@@ -33,7 +33,6 @@ function estadoParcial(doc, turnos) {
 // Una clase del profesor: sus parciales con el estado de cada uno y las entregas a corregir.
 export default function ClaseProfesorPage() {
   const { id } = useParams()
-  const [, refresh] = useReducer((n) => n + 1, 0)
   // La pestaña vive en la URL para que "Volver" y el refresh la conserven.
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'entregas' ? 'entregas' : 'parciales'
@@ -61,16 +60,18 @@ export default function ClaseProfesorPage() {
   const sinCorregir = entregas.filter((e) => !isGraded(e))
   const corregidas = entregas.filter(isGraded)
 
-  function handlePublish(doc) {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) {
-      publishDocument(doc.id)
-      refresh()
+  async function handlePublish(doc) {
+    if (!window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) return
+    try {
+      await publishDocument(doc.id)
+    } catch (e) {
+      window.alert(`No se pudo publicar. ${e.message}`)
     }
   }
 
   return (
     <>
-      <p><Link to="/">← Volver al inicio</Link></p>
+      <BackLink to="/">Volver al inicio</BackLink>
       <div className="page-header">
         <h1>{clase.nombre}</h1>
         <Link to={`/documentos/nuevo?clase=${clase.id}`} className="button">Nuevo parcial</Link>
@@ -128,7 +129,7 @@ export default function ClaseProfesorPage() {
                       Publicar
                     </button>
                   )}
-                  <TomarAhoraButton doc={doc} onTomado={refresh} />
+                  <TomarAhoraButton doc={doc} onTomado={() => {}} />
                   <Link to={`/documentos/${doc.id}`} className="button secondary">Ver</Link>
                 </div>
               </li>

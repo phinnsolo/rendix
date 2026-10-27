@@ -82,7 +82,9 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
     setHorarios((current) => current.map((h) => (h.id || h.turno ? h : { ...h, turno })))
   }
 
-  function handleSubmit(event) {
+  const [enviando, setEnviando] = useState(false)
+
+  async function handleSubmit(event) {
     event.preventDefault()
     if (!claseId) {
       setError('Elegí una clase.')
@@ -120,8 +122,9 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
       const api = geogebraApis.current.get(block.id)
       return api ? { ...block, ggbBase64: api.getBase64() } : block
     })
+    setEnviando(true)
     try {
-      onSubmit({
+      await onSubmit({
         claseId,
         titulo: titulo.trim(),
         tema,
@@ -132,8 +135,9 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
           .filter((h) => !h.bloqueado)
           .map(({ id, turno, fecha, horaInicio }) => ({ id, turno, fecha, horaInicio })),
       })
-    } catch {
-      setError('No se pudo guardar: el almacenamiento del navegador está lleno.')
+    } catch (e) {
+      setError(`No se pudo guardar. ${e.message}`)
+      setEnviando(false)
     }
   }
 
@@ -192,7 +196,7 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
 
       {error && <p className="error">{error}</p>}
       <div className="actions">
-        <button type="submit" form={formId}>{submitLabel}</button>
+        <button type="submit" form={formId} disabled={enviando}>{enviando ? 'Guardando…' : submitLabel}</button>
         <Link to={cancelTo} className="button secondary">Cancelar</Link>
       </div>
     </div>

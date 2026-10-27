@@ -4,6 +4,7 @@ import { getDocument } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getAllSubmissions, isGraded } from '../submissionsStore.js'
 import SubmissionChips from '../components/SubmissionChips.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 const TABS = {
   pendientes: { label: 'Sin corregir', vacio: 'No hay entregas sin corregir.' },
@@ -20,7 +21,7 @@ export default function SubmissionsPage() {
 
   return (
     <>
-      <p><Link to="/">← Volver al inicio</Link></p>
+      <BackLink to="/">Volver al inicio</BackLink>
       <h1>Entregas</h1>
       <div className="tabs" role="tablist">
         {Object.entries(TABS).map(([key, { label }]) => (

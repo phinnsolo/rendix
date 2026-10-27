@@ -1,4 +1,4 @@
-import { useReducer, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getClase } from '../clasesStore.js'
 import { deleteDocument, getDocument, isPublished, publishDocument } from '../documentsStore.js'
@@ -13,12 +13,11 @@ import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
 import { alumnosLabel, estadoTurno, formatHorario, getTurnosFor } from '../turnosStore.js'
 import { avisoBorrado } from '../deleteNotice.js'
+import BackLink from '../components/BackLink.jsx'
 
 export default function DocumentDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  // Al publicar, el parcial se vuelve a leer del almacenamiento.
-  const [, refresh] = useReducer((n) => n + 1, 0)
   const [recienPublicado, setRecienPublicado] = useState(false)
   const doc = getDocument(id)
 
@@ -34,31 +33,36 @@ export default function DocumentDetailPage() {
   // Publicar solo tiene sentido si queda algún turno por empezar.
   const hayTurnoFuturo = turnos.some((t) => estadoTurno(t) === 'proximo')
 
-  function handleDelete() {
-    if (window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) {
-      deleteDocument(doc.id)
+  async function handleDelete() {
+    if (!window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) return
+    try {
+      await deleteDocument(doc.id)
       navigate(back.to)
+    } catch (e) {
+      window.alert(`No se pudo eliminar. ${e.message}`)
     }
   }
 
   function handleTomado() {
     setRecienPublicado(true)
-    refresh()
     window.scrollTo(0, 0)
   }
 
-  function handlePublish() {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) {
-      publishDocument(doc.id)
-      setRecienPublicado(true)
-      refresh()
-      window.scrollTo(0, 0)
+  async function handlePublish() {
+    if (!window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) return
+    try {
+      await publishDocument(doc.id)
+    } catch (e) {
+      window.alert(`No se pudo publicar. ${e.message}`)
+      return
     }
+    setRecienPublicado(true)
+    window.scrollTo(0, 0)
   }
 
   return (
     <>
-      <p><Link to={back.to}>← {back.label}</Link></p>
+      <BackLink to={back.to}>{back.label}</BackLink>
       <div className="page-header">
         <h1>{doc.titulo}</h1>
         <div className="actions">

@@ -1,6 +1,6 @@
 import { isGraded } from '../submissionsStore.js'
 
-// Estado de una entrega para el profesor: corregida (con nota) o sin corregir, y si se envió por tiempo.
+// Estado de una entrega para el profesor: corregida (con nota) o sin corregir, y si se envió sola.
 export default function SubmissionChips({ entrega }) {
   return (
     <>
@@ -8,6 +8,7 @@ export default function SubmissionChips({ entrega }) {
         ? <span className="chip published">Nota: {entrega.correccion.nota}</span>
         : <span className="chip pending">Sin corregir</span>}
       {entrega.enviadoPorTiempo && <span className="chip">Enviado por tiempo</span>}
+      {entrega.enviadoPorSistema && <span className="chip">Entregado por sistema</span>}
     </>
   )
 }

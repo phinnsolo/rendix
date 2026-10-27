@@ -81,3 +81,12 @@ export function textFromBlocks(bloques) {
     .filter(Boolean)
     .join('\n\n')
 }
+
+// Apartados tal como los ve el alumno: sin marcar cuál es la opción correcta del multiple choice.
+export function blocksParaAlumno(bloques) {
+  return bloques.map((block) =>
+    block.tipo === 'opcion-multiple'
+      ? { ...block, opciones: block.opciones.map(({ correcta: _correcta, ...opcion }) => opcion) }
+      : block
+  )
+}

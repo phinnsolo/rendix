@@ -121,6 +121,29 @@ button.danger { background: var(--surface); color: var(--danger); border-color: 
 button.danger:hover:not(:disabled) { background: var(--danger-tint); border-color: var(--danger); color: var(--danger); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Volver: pestañita con flecha arriba del título */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  margin: 0 0 1rem;
+  padding: 0.3rem 0.8rem 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sheet);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.12s, border-color 0.12s, background-color 0.12s;
+}
+.back-link:hover { color: var(--primary); border-color: #c3cdea; background: var(--primary-tint); }
+.back-link-arrow { width: 1rem; height: 1rem; flex-shrink: 0; transition: transform 0.12s; }
+.back-link:hover .back-link-arrow { transform: translateX(-2px); }
+h1 + .back-link { display: flex; width: fit-content; }
+
 .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .page-header h1 { margin: 0; }
@@ -183,8 +206,22 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .exam-start p { margin: 0 0 0.5rem; line-height: 1.55; }
 .exam-start .actions { margin-top: 0.75rem; }
 .exam-header.sticky { position: sticky; top: 0; z-index: 5; box-shadow: 0 4px 12px rgb(27 34 48 / 0.08); }
-.exam-time strong { font-size: 1.2rem; }
-.exam-time.low { color: var(--danger); }
+.exam-time strong { font-size: 1.2rem; letter-spacing: 0.02em; }
+/* Últimos 10 min: el reloj se marca con resaltador; último minuto: birome roja. */
+.exam-time.warning strong { color: var(--highlight-text); background: var(--highlight); box-shadow: 0 0 0 0.2rem var(--highlight); border-radius: 2px; }
+.exam-time.urgent { color: var(--danger); }
+.exam-time.urgent strong { text-decoration: underline wavy var(--margin-line); text-underline-offset: 0.3em; }
+/* Estado del autoguardado: nota de lápiz al lado del reloj. */
+.save-status { font-size: 0.85rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.35rem; }
+.save-status::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--success); }
+.save-status.guardando::before { background: var(--highlight-border); }
+.save-status.sin-conexion { color: var(--danger); font-weight: 700; }
+.save-status.sin-conexion::before { background: var(--danger); }
+.exam-alerts:empty { display: none; }
+.exam-alert { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.75rem; padding: 0.6rem 1rem; font-weight: 700; color: var(--highlight-text); background: var(--highlight); border: 1px solid var(--highlight-border); border-radius: var(--radius-control); }
+.exam-alert.urgent { color: var(--danger); background: var(--danger-tint); border-color: var(--margin-line); }
+.exam-alert-close { padding: 0 0.4rem; font-size: 1.2rem; line-height: 1; color: inherit; background: transparent; border: none; }
+.exam-locked { opacity: 0.6; }
 .exam-tools-sep { margin: 0 0.15rem; }
 .mc-setup { list-style: none; margin: 0; padding: 0.5rem 0 0; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 0.35rem; }
 .mc-setup li { display: flex; align-items: center; gap: 0.5rem; }
@@ -336,6 +373,8 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .tracking-table th { font-size: 0.85rem; font-weight: 700; color: var(--muted); background: var(--bg); }
 .tracking-table tbody tr:last-child td { border-bottom: none; }
 .tracking-table tbody tr:hover td { background: #f8faff; }
+.tracking-table .num { font-variant-numeric: tabular-nums; }
+.tracking-table .num.urgent { color: var(--danger); font-weight: 700; }
 .table-sub { display: block; margin: 0; }
 .table-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
 .table-actions .button, .table-actions button { padding: 0.3rem 0.65rem; font-size: 0.85rem; }

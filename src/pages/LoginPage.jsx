@@ -13,14 +13,22 @@ export default function LoginPage() {
     return <Navigate to={homePath()} replace />
   }
 
-  function handleSubmit(event) {
+  const [enviando, setEnviando] = useState(false)
+
+  async function handleSubmit(event) {
     event.preventDefault()
-    const session = login(username.trim(), password)
-    if (session) {
-      navigate(homePath(session), { replace: true })
-    } else {
+    setEnviando(true)
+    try {
+      const session = await login(username.trim(), password)
+      if (session) {
+        navigate(homePath(session), { replace: true })
+        return
+      }
       setError('Usuario o contraseña incorrectos.')
+    } catch (e) {
+      setError(e.message)
     }
+    setEnviando(false)
   }
 
   return (
@@ -39,7 +47,7 @@ export default function LoginPage() {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
         {error && <p className="error">{error}</p>}
-        <button type="submit">Ingresar</button>
+        <button type="submit" disabled={enviando}>{enviando ? 'Ingresando…' : 'Ingresar'}</button>
         <p className="muted small login-switch">
           ¿Sos alumno y no tenés cuenta? <Link to="/registro">Crear cuenta</Link>
         </p>

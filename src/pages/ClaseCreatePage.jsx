@@ -5,8 +5,8 @@ import { createClase } from '../clasesStore.js'
 export default function ClaseCreatePage() {
   const navigate = useNavigate()
 
-  function handleSubmit(values) {
-    const clase = createClase(values)
+  async function handleSubmit(values) {
+    const clase = await createClase(values)
     navigate(`/dev/clases/${clase.id}`)
   }
 

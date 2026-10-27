@@ -1,6 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
-import { getSession } from '../auth.js'
-import { PROFESORES } from '../config.js'
+import { getSession, nombreDe } from '../auth.js'
 import { getPublishedDocumentOf } from '../documentsStore.js'
 import { getSubmissionOf } from '../submissionsStore.js'
 import { getTurnosDeAlumno } from '../turnosStore.js'
@@ -25,7 +24,7 @@ export default function StudentExamListPage() {
       turno,
       doc,
       entrega: getSubmissionOf(turno.profesor, doc.id, session.username),
-      profesor: PROFESORES.find((p) => p.username === turno.profesor),
+      profesor: { nombre: nombreDe(turno.profesor) },
     }))
   const porTab = {
     pendientes: parciales.filter((p) => !p.entrega),

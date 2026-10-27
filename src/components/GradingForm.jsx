@@ -13,16 +13,24 @@ export default function GradingForm({ entrega, onGraded }) {
   const [error, setError] = useState('')
   const [guardado, setGuardado] = useState(false)
 
-  function handleSubmit(event) {
+  const [enviando, setEnviando] = useState(false)
+
+  async function handleSubmit(event) {
     event.preventDefault()
     const valor = Number(nota.replace(',', '.'))
     if (!nota.trim() || !isValidNota(valor)) {
       setError('La nota tiene que ser un número entre 0 y 10.')
       return
     }
-    onGraded(gradeSubmission(entrega.id, { nota: valor, comentario: comentario.trim() }))
-    setError('')
-    setGuardado(true)
+    setEnviando(true)
+    try {
+      onGraded(await gradeSubmission(entrega.id, { nota: valor, comentario: comentario.trim() }))
+      setError('')
+      setGuardado(true)
+    } catch (e) {
+      setError(`No se pudo guardar la corrección. ${e.message}`)
+    }
+    setEnviando(false)
   }
 
   return (
@@ -54,7 +62,7 @@ export default function GradingForm({ entrega, onGraded }) {
       </label>
       {error && <p className="error">{error}</p>}
       <div className="actions grading-actions">
-        <button type="submit">{entrega.correccion ? 'Guardar cambios' : 'Guardar corrección'}</button>
+        <button type="submit" disabled={enviando}>{entrega.correccion ? 'Guardar cambios' : 'Guardar corrección'}</button>
         {guardado && <span className="muted small">Corrección guardada.</span>}
       </div>
     </form>

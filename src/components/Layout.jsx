@@ -1,25 +1,44 @@
-import { useEffect, useReducer } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { SESION_VENCIDA_EVENT } from '../api.js'
 import { getRole, getSession, homePath, logout } from '../auth.js'
-import { CORRECCION_EVENT, getAllSubmissions, isGraded } from '../submissionsStore.js'
+import { hayDatos, recargarDatos, useDatos } from '../datos.js'
+import { getAllSubmissions, isGraded } from '../submissionsStore.js'
 import icon from '../assets/rendix-icon.png'
 
 export default function Layout() {
   const navigate = useNavigate()
   const session = getSession()
   const rol = getRole(session)
-  // useNavigate re-renderiza el Layout en cada navegación; al corregir sin navegar, avisa CORRECCION_EVENT.
-  const [, refresh] = useReducer((n) => n + 1, 0)
-  useEffect(() => {
-    window.addEventListener(CORRECCION_EVENT, refresh)
-    return () => window.removeEventListener(CORRECCION_EVENT, refresh)
+  const { pathname } = useLocation()
+  // Re-renderiza todo cuando llegan datos nuevos del servidor.
+  useDatos()
+  const [error, setError] = useState('')
+  const recargar = useCallback(() => {
+    recargarDatos().then(() => setError(''), (e) => setError(e.message))
   }, [])
-  const sinCorregir = rol !== 'profesor' ? 0 : getAllSubmissions().filter((e) => !isGraded(e)).length
 
-  function handleLogout() {
+  // Se recargan al navegar, al volver a la pestaña y cada 30 s, para ver lo que cambió en otros dispositivos.
+  useEffect(recargar, [pathname, recargar])
+  useEffect(() => {
+    const timer = setInterval(recargar, 30_000)
+    window.addEventListener('focus', recargar)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('focus', recargar)
+    }
+  }, [recargar])
+
+  const handleLogout = useCallback(() => {
     logout()
     navigate('/login', { replace: true })
-  }
+  }, [navigate])
+  useEffect(() => {
+    window.addEventListener(SESION_VENCIDA_EVENT, handleLogout)
+    return () => window.removeEventListener(SESION_VENCIDA_EVENT, handleLogout)
+  }, [handleLogout])
+
+  const sinCorregir = rol !== 'profesor' ? 0 : getAllSubmissions().filter((e) => !isGraded(e)).length
 
   return (
     <>
@@ -53,7 +72,16 @@ export default function Layout() {
         </div>
       </header>
       <main className="container">
-        <Outlet />
+        {hayDatos() ? (
+          <Outlet />
+        ) : error ? (
+          <div className="card notice" role="alert">
+            <p>{error}</p>
+            <button type="button" onClick={recargar}>Reintentar</button>
+          </div>
+        ) : (
+          <p className="muted" role="status">Cargando…</p>
+        )}
       </main>
     </>
   )

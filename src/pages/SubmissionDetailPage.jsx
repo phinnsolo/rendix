@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { getClase } from '../clasesStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmission } from '../submissionsStore.js'
@@ -8,6 +8,7 @@ import ExamHeader from '../components/ExamHeader.jsx'
 import GradingForm from '../components/GradingForm.jsx'
 import NotFound from '../components/NotFound.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
+import BackLink from '../components/BackLink.jsx'
 
 // Si el envío automático ocurrió tarde (el alumno volvió con el tiempo vencido), el tiempo usado es la duración.
 function tiempoUsado({ fechaInicio, fechaEntrega, duracion }) {
@@ -34,7 +35,7 @@ export default function SubmissionDetailPage() {
 
   return (
     <>
-      <p><Link to={back.to}>← {back.label}</Link></p>
+      <BackLink to={back.to}>{back.label}</BackLink>
       <h1>{entrega.titulo} — {entrega.alumnoNombre}</h1>
       <p className="muted small chips-line">
         <SubmissionChips entrega={entrega} />
