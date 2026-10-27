@@ -14,6 +14,7 @@ import StudentExamPage from './pages/StudentExamPage.jsx'
 import SubmissionDetailPage from './pages/SubmissionDetailPage.jsx'
 import SubmissionsPage from './pages/SubmissionsPage.jsx'
 import TurnoDetailPage from './pages/TurnoDetailPage.jsx'
+import MonitoreoPage from './pages/MonitoreoPage.jsx'
 import ClaseListPage from './pages/ClaseListPage.jsx'
 import ClaseCreatePage from './pages/ClaseCreatePage.jsx'
 import ClaseDetailPage from './pages/ClaseDetailPage.jsx'
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/documentos/:id/entregas/:entregaId" element={<SubmissionDetailPage />} />
         <Route path="/entregas" element={<SubmissionsPage />} />
         <Route path="/documentos/:id/turnos/:turnoId" element={<TurnoDetailPage />} />
+        <Route path="/monitoreo" element={<MonitoreoPage />} />
         <Route path="/clases/:id" element={<ClaseProfesorPage />} />
       </Route>
       <Route

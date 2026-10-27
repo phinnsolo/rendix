@@ -373,6 +373,26 @@ ruta('DELETE', '/api/turnos/:id/alumnos/:username', 'profesor', async ({ params,
 ruta('GET', '/api/turnos/:id/seguimiento', 'profesor', async ({ params, sesion }) => {
   const { rows: [turno] } = await query('select * from turnos where id = $1 and profesor = $2', [params.id, sesion.username])
   if (!turno) throw new HttpError(404, 'El turno no existe.')
+  return { alumnos: await filasSeguimiento(turno) }
+})
+
+// Monitoreo: los turnos del profesor que están en curso ahora, con el seguimiento de cada uno.
+ruta('GET', '/api/monitoreo', 'profesor', async ({ sesion }) => {
+  const ahora = new Date()
+  const { rows } = await query(
+    `select t.*, d.titulo from turnos t join documentos d on d.id = t.parcial_id
+     where t.profesor = $1 and t.inicio <= $2 and t.fin > $2 order by t.fin`,
+    [sesion.username, ahora]
+  )
+  return {
+    turnos: await Promise.all(
+      rows.map(async (t) => ({ ...aTurno(t), titulo: t.titulo, alumnos: await filasSeguimiento(t) }))
+    ),
+  }
+})
+
+// Sesión y entrega de cada alumno asignado a un turno (fila de la base). Antes entrega las sesiones vencidas.
+async function filasSeguimiento(turno) {
   await tx((c) => finalizarVencidas(c, 's.turno_id = $1', turno.id))
   const [sesiones, entregas] = await Promise.all([
     query('select * from sesiones_examen where turno_id = $1', [turno.id]),
@@ -380,18 +400,16 @@ ruta('GET', '/api/turnos/:id/seguimiento', 'profesor', async ({ params, sesion }
   ])
   const porAlumno = new Map(sesiones.rows.map((s) => [s.alumno, aSesion(s)]))
   const entregaDe = new Map(entregas.rows.map((e) => [e.alumno, aEntrega(e)]))
-  return {
-    alumnos: turno.alumnos.map((username) => {
-      const s = porAlumno.get(username)
-      const e = entregaDe.get(username)
-      return {
-        username,
-        sesion: s ? { apertura: s.apertura, deadline: s.deadline, ultimoGuardado: s.ultimoGuardado, ultimoLatido: s.ultimoLatido, pendientes: s.pendientes, estado: s.estado } : null,
-        entrega: e ? { id: e.id, fechaInicio: e.fechaInicio, fechaEntrega: e.fechaEntrega, enviadoPorTiempo: e.enviadoPorTiempo, enviadoPorSistema: e.enviadoPorSistema } : null,
-      }
-    }),
-  }
-})
+  return turno.alumnos.map((username) => {
+    const s = porAlumno.get(username)
+    const e = entregaDe.get(username)
+    return {
+      username,
+      sesion: s ? { apertura: s.apertura, deadline: s.deadline, ultimoGuardado: s.ultimoGuardado, ultimoLatido: s.ultimoLatido, pendientes: s.pendientes, estado: s.estado } : null,
+      entrega: e ? { id: e.id, fechaInicio: e.fechaInicio, fechaEntrega: e.fechaEntrega, enviadoPorTiempo: e.enviadoPorTiempo, enviadoPorSistema: e.enviadoPorSistema } : null,
+    }
+  })
+}
 
 // --- Entregas (profesor)
 

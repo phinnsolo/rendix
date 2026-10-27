@@ -373,8 +373,56 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .tracking-table th { font-size: 0.85rem; font-weight: 700; color: var(--muted); background: var(--bg); }
 .tracking-table tbody tr:last-child td { border-bottom: none; }
 .tracking-table tbody tr:hover td { background: #f8faff; }
-.tracking-table .num { font-variant-numeric: tabular-nums; }
-.tracking-table .num.urgent { color: var(--danger); font-weight: 700; }
+
+/* Monitoreo: un panel por turno en curso, con tres indicadores y la tabla de alumnos. */
+.monitor { margin: 0 0 1.5rem; padding: 1rem 1.25rem 1.25rem; border-left: 4px solid var(--primary); }
+.monitor-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.25rem 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.monitor-head h2 { margin: 0; font-size: 1.2rem; }
+.monitor-head h2 a { color: var(--text); text-decoration: none; }
+.monitor-head h2 a:hover { color: var(--primary); text-decoration: underline; }
+.monitor-head p { margin: 0; }
+.monitor-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--primary-tint); }
+.monitor-stat { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.8rem 1rem; color: var(--primary); }
+.monitor-stat + .monitor-stat { border-left: 1px solid var(--border); }
+.monitor-stat > div { display: flex; flex-direction: column; min-width: 0; }
+.monitor-icon { flex: none; width: 1.9rem; height: 1.9rem; margin-top: 0.15rem; }
+.monitor-stat-label { font-size: 0.82rem; color: var(--muted); }
+.monitor-stat-value { font-size: 1.65rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--primary); }
+.monitor-stat-value.small { font-size: 1.1rem; padding-top: 0.3rem; }
+.monitor-stat-value.warning { align-self: flex-start; color: var(--highlight-text); background: var(--highlight); box-shadow: 0 0 0 0.2rem var(--highlight); border-radius: 2px; }
+.monitor-stat-value.urgent { color: var(--danger); }
+.monitor-stat-note { font-size: 0.8rem; color: var(--muted); }
+.monitor-stat.offline, .monitor-stat.offline .monitor-stat-value { color: var(--danger); }
+.monitor-stat.pending .monitor-stat-value { align-self: flex-start; padding: 0 0.35rem; color: var(--highlight-text); background: var(--highlight); border-radius: 2px; }
+.monitor .table-scroll { box-shadow: none; }
+.monitor-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.monitor-table th, .monitor-table td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.monitor-table th { font-size: 0.85rem; font-weight: 700; color: var(--muted); background: var(--bg); }
+.monitor-table tbody tr:last-child td { border-bottom: none; }
+.monitor-num { font-variant-numeric: tabular-nums; }
+.monitor-num.urgent { color: var(--danger); font-weight: 700; }
+.monitor-estado { min-width: 11rem; width: 38%; }
+.monitor-estado-label { display: flex; align-items: center; gap: 0.45rem; font-weight: 700; }
+.monitor-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--state); }
+.monitor-bar { display: block; height: 0.4rem; margin-top: 0.35rem; overflow: hidden; border-radius: 999px; background: var(--grid); }
+.monitor-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--state); transition: width 0.9s linear; }
+/* Color de cada estado: verde en línea, rojo desconectado (hay que mirarlo), tinta entregado, rayado si lo entregó el sistema. */
+.monitor-row { --state: var(--border); }
+.monitor-row.en-linea { --state: var(--success); }
+.monitor-row.desconectado { --state: var(--danger); }
+.monitor-row.desconectado .monitor-estado-label { color: var(--danger); }
+.monitor-row.entregado, .monitor-row.entregado-sistema { --state: var(--primary); }
+.monitor-row.entregado-sistema .monitor-bar > span { background: repeating-linear-gradient(-45deg, var(--primary) 0 6px, var(--primary-hover) 6px 9px); opacity: 0.75; }
+.monitor-row.no-abrio .monitor-estado-label, .monitor-row.no-completo .monitor-estado-label { color: var(--muted); font-weight: 400; }
+.monitor-pending-cell { width: 2rem; text-align: center; }
+.monitor-pending { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--highlight); border: 2px solid var(--highlight-border); }
+.monitor-empty { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.monitor-empty p { margin: 0; }
+@media (max-width: 640px) {
+  .monitor { padding: 0.9rem; }
+  .monitor-stats { grid-template-columns: 1fr; }
+  .monitor-stat + .monitor-stat { border-left: none; border-top: 1px solid var(--border); }
+}
 .table-sub { display: block; margin: 0; }
 .table-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
 .table-actions .button, .table-actions button { padding: 0.3rem 0.65rem; font-size: 0.85rem; }

@@ -58,6 +58,7 @@ export default function Layout() {
           {rol === 'profesor' && (
             <>
               <NavLink to="/documentos">Parciales</NavLink>
+              <NavLink to="/monitoreo">Monitoreo</NavLink>
               <NavLink to="/entregas">
                 Entregas{sinCorregir > 0 && <span className="nav-badge" aria-label={`${sinCorregir} sin corregir`}>{sinCorregir}</span>}
               </NavLink>
