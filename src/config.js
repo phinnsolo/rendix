@@ -1,24 +1,10 @@
-// Credenciales predefinidas — TEMPORAL, solo para Semana 1.
-// No es seguro: todo el código del frontend es visible para cualquiera.
-// Se reemplazará por autenticación real cuando haya backend.
-export const PROFESORES = [
-  { username: 'profesor1', password: 'rendix123', nombre: 'Profesor Demo 1', rol: 'profesor' },
-  { username: 'profesor2', password: 'rendix123', nombre: 'Profesor Demo 2', rol: 'profesor' },
-  { username: 'profesor3', password: 'rendix123', nombre: 'Profesor Demo 3', rol: 'profesor' },
-]
+// Configuración compartida por el frontend y la API. Las cuentas predefinidas se cargan en la base con
+// scripts/seed.js (scripts/seed-data.js): ya no viajan en el código del navegador.
 
-// Desarrolladores: crean las clases y les asignan profesores y alumnos.
-export const DEVS = [
-  { username: 'dev1', password: 'rendix123', nombre: 'Dev Demo', rol: 'dev' },
-]
-
-// Alumnos registrados. Qué parciales ve cada uno lo deciden los turnos a los que lo asigna un profesor.
-export const ALUMNOS = Array.from({ length: 10 }, (_, i) => ({
-  username: `alumno${i + 1}`,
-  password: 'rendix123',
-  nombre: `Alumno Demo ${i + 1}`,
-  rol: 'alumno',
-}))
+// Zona horaria fija de la app: la fecha y la hora de los turnos se interpretan en hora argentina (sin horario
+// de verano), así el servidor y todos los dispositivos calculan el mismo instante.
+export const ZONA_HORARIA = '-03:00'
+export const ZONA_HORARIA_IANA = 'America/Argentina/Buenos_Aires'
 
 // Temas de examen disponibles. Para agregar o quitar temas, editar esta lista.
 export const TEMAS = ['Tema 1', 'Tema 2', 'Tema 3']
@@ -52,8 +38,8 @@ export const DIAS = {
   sabado: 'Sábado',
 }
 
-// Clases predefinidas (no se editan desde la app). Cada clase se dicta siempre el mismo día y turno.
-// Las que crea el dev se guardan aparte, en clasesStore.js.
+// Clases predefinidas: el seed las carga en la base. Cada clase se dicta siempre el mismo día y turno.
+// El dev las puede editar desde la app como cualquier otra.
 export const CLASES = [
   {
     id: 'matematicas',

@@ -6,12 +6,12 @@ export default function TomarAhoraButton({ doc, onTomado, className = 'secondary
   const sinClase = !getClase(doc.claseId)
   if (!sinClase && !puedeTomarAhora(doc)) return null
 
-  function handleClick() {
+  async function handleClick() {
     if (!confirmarTomarAhora(doc)) return
     try {
-      tomarAhora(doc)
-    } catch {
-      window.alert('No se pudo guardar: el almacenamiento del navegador está lleno.')
+      await tomarAhora(doc)
+    } catch (e) {
+      window.alert(`No se pudo tomar el parcial. ${e.message}`)
       return
     }
     onTomado()

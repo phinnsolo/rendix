@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAlumnos } from '../auth.js'
-import { DIAS, PROFESORES, TURNOS } from '../config.js'
+import { getAlumnos, getProfesores } from '../auth.js'
+import { DIAS, TURNOS } from '../config.js'
 import { validateClase } from '../clasesStore.js'
 
 function toggle(lista, username) {
@@ -34,15 +34,20 @@ export default function ClaseForm({ initialValues, onSubmit, submitLabel, cancel
     setValues((current) => ({ ...current, [campo]: valor }))
   }
 
-  function handleSubmit(event) {
+  const [enviando, setEnviando] = useState(false)
+
+  async function handleSubmit(event) {
     event.preventDefault()
     const nuevos = validateClase(values)
     setErrores(nuevos)
     if (Object.keys(nuevos).length > 0) return
+    setEnviando(true)
     try {
-      onSubmit(values)
-    } catch {
-      setError('No se pudo guardar: el almacenamiento del navegador está lleno.')
+      await onSubmit(values)
+    } catch (e) {
+      if (e.errores) setErrores(e.errores)
+      setError(`No se pudo guardar. ${e.message}`)
+      setEnviando(false)
     }
   }
 
@@ -87,7 +92,7 @@ export default function ClaseForm({ initialValues, onSubmit, submitLabel, cancel
       <fieldset className="tools-selector">
         <legend>Profesores ({values.profesores.length})</legend>
         <ul className="assign-list">
-          {PROFESORES.map((p) => (
+          {getProfesores().map((p) => (
             <li key={p.username}>
               <label className="assign-option">
                 <input

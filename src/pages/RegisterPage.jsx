@@ -18,16 +18,17 @@ export default function RegisterPage() {
     return (event) => setValues((current) => ({ ...current, [campo]: event.target.value }))
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     const nuevos = validateRegistro(values)
     setErrores(nuevos)
     if (Object.keys(nuevos).length > 0) return
     try {
-      const session = registrarAlumno(values)
+      const session = await registrarAlumno(values)
       navigate(homePath(session), { replace: true })
-    } catch {
-      setError('No se pudo crear la cuenta: el almacenamiento del navegador está lleno.')
+    } catch (e) {
+      if (e.errores) setErrores(e.errores)
+      else setError(e.message)
     }
   }
 

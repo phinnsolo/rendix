@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { nombreClase } from '../clasesStore.js'
 import { deleteDocument, getDocuments, isPublished, publishDocument } from '../documentsStore.js'
@@ -15,23 +14,27 @@ const TABS = {
 }
 
 export default function DocumentListPage() {
-  const [documents, setDocuments] = useState(getDocuments)
+  const documents = getDocuments()
   // La pestaña vive en la URL para que "Volver a parciales" y el refresh la conserven.
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'publicados' ? 'publicados' : 'creados'
   const visibles = documents.filter((doc) => isPublished(doc) === (tab === 'publicados'))
 
-  function handleDelete(doc) {
-    if (window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) {
-      deleteDocument(doc.id)
-      setDocuments(getDocuments())
+  async function handleDelete(doc) {
+    if (!window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) return
+    try {
+      await deleteDocument(doc.id)
+    } catch (e) {
+      window.alert(`No se pudo eliminar. ${e.message}`)
     }
   }
 
-  function handlePublish(doc) {
-    if (window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) {
-      publishDocument(doc.id)
-      setDocuments(getDocuments())
+  async function handlePublish(doc) {
+    if (!window.confirm(`¿Publicar "${doc.titulo}"? Los alumnos de la clase lo van a ver.`)) return
+    try {
+      await publishDocument(doc.id)
+    } catch (e) {
+      window.alert(`No se pudo publicar. ${e.message}`)
     }
   }
 
@@ -87,7 +90,7 @@ export default function DocumentListPage() {
                       Publicar
                     </button>
                   )}
-                  <TomarAhoraButton doc={doc} onTomado={() => setDocuments(getDocuments())} />
+                  <TomarAhoraButton doc={doc} onTomado={() => {}} />
                   <Link to={`/documentos/${doc.id}/editar`} className="button secondary">Editar</Link>
                   <button type="button" className="danger" onClick={() => handleDelete(doc)}>
                     Eliminar

@@ -1,7 +1,8 @@
+import { request } from './api.js'
 import { getClase } from './clasesStore.js'
-import { isPublished, publishDocument } from './documentsStore.js'
+import { recargarDatos } from './datos.js'
 import { getDuracion, isValidDuracion } from './examSettings.js'
-import { asignarAlumnos, borrarTurnosVacios, crearTurnoAhora, estadoTurno, getTurnosFor } from './turnosStore.js'
+import { estadoTurno, getTurnosFor } from './turnosStore.js'
 
 // "Tomar ahora": abre un turno que empieza en este momento con todos los alumnos de la clase y publica el
 // parcial, para tomarlo sin programarlo antes.
@@ -17,12 +18,10 @@ export function puedeTomarAhora(doc) {
 
 // Los alumnos que estaban en un turno que todavía no empezó se pasan a este; los que ya lo rindieron
 // (o lo están rindiendo) quedan donde estaban. Los turnos programados que quedan vacíos se borran.
-export function tomarAhora(doc) {
-  const turno = crearTurnoAhora(doc.id, getDuracion(doc))
-  asignarAlumnos(turno.id, getClase(doc.claseId).alumnos)
-  borrarTurnosVacios(doc.id)
-  if (!isPublished(doc)) publishDocument(doc.id)
-  return turno
+export async function tomarAhora(doc) {
+  const { turnoId } = await request('POST', `/api/documentos/${doc.id}/tomar-ahora`)
+  await recargarDatos()
+  return turnoId
 }
 
 export function confirmarTomarAhora(doc) {

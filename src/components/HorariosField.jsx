@@ -1,11 +1,12 @@
 import { TURNOS } from '../config.js'
 import { isValidDuracion } from '../examSettings.js'
 import { formatHorario, rangoInicio, sumarMinutos, validateHorario } from '../turnosStore.js'
+import { fechaHoraLocal } from '../turnos.js'
+import { now } from '../clock.js'
 
-// Fecha de hoy en la hora local, como la usa <input type="date">.
+// Fecha de hoy en la zona horaria de la app, como la usa <input type="date">.
 function hoy() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return fechaHoraLocal(now()).fecha
 }
 
 export function nuevoHorario(turno = '') {

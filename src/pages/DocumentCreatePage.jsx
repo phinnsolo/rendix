@@ -1,8 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import DocumentForm from '../components/DocumentForm.jsx'
-import { getClase } from '../clasesStore.js'
 import { createDocument } from '../documentsStore.js'
-import { syncHorarios } from '../turnosStore.js'
 
 // Con ?clase=<id> (al entrar desde una clase), la clase viene elegida y Cancelar vuelve a ella.
 export default function DocumentCreatePage() {
@@ -10,9 +8,8 @@ export default function DocumentCreatePage() {
   const [searchParams] = useSearchParams()
   const claseId = searchParams.get('clase') ?? ''
 
-  function handleSubmit({ horarios, ...values }) {
-    const doc = createDocument(values)
-    syncHorarios(doc.id, horarios, values.duracion, getClase(values.claseId)?.alumnos)
+  async function handleSubmit(values) {
+    const doc = await createDocument(values)
     navigate(`/documentos/${doc.id}`)
   }
 

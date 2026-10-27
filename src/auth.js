@@ -1,94 +1,57 @@
-import { ALUMNOS, DEVS, PROFESORES } from './config.js'
-
 // La sesión vive en sessionStorage: cada pestaña tiene la suya, así se puede tener al profesor en una
-// y a un alumno en otra. Los datos (parciales, turnos, entregas) siguen en localStorage, compartidos.
+// y a un alumno en otra. El servidor la valida con el token firmado que devuelve al iniciar sesión.
+
+import { getToken, request, setToken } from './api.js'
+import { borrarDatos, getDatos } from './datos.js'
+
+export { validateRegistro } from './registro.js'
+
 const SESSION_KEY = 'rendix_session'
 
-// Alumnos que crearon su cuenta desde el login. TEMPORAL: sin backend, quedan en el localStorage del
-// navegador con la contraseña en texto plano. Entran con su usuario o su mail. Las cuentas creadas
-// antes de que existiera el campo usuario tienen el mail como usuario.
-const ALUMNOS_KEY = 'rendix_alumnos'
-
-const PASSWORD_MINIMA = 6
-
-function alumnosRegistrados() {
-  try {
-    return JSON.parse(localStorage.getItem(ALUMNOS_KEY)) || []
-  } catch {
-    return []
-  }
-}
-
-// Alumnos fijos de config.js y los que se registraron.
+// Alumnos que puede ver el usuario (para asignarlos a clases y turnos).
 export function getAlumnos() {
-  return [...ALUMNOS, ...alumnosRegistrados()]
+  return getDatos().usuarios.filter((u) => u.rol === 'alumno')
 }
 
-function usuarios() {
-  return [...DEVS, ...PROFESORES, ...getAlumnos()]
+export function getProfesores() {
+  return getDatos().usuarios.filter((u) => u.rol === 'profesor')
 }
 
-// Nombre para mostrar de cualquier usuario; si no existe, el propio usuario.
+// Nombre para mostrar de cualquier usuario; si no se conoce, el propio usuario.
 export function nombreDe(username) {
-  return usuarios().find((u) => u.username === username)?.nombre ?? username
+  return getDatos().usuarios.find((u) => u.username === username)?.nombre ?? username
 }
 
-function iniciarSesion(usuario) {
-  const session = { username: usuario.username, nombre: usuario.nombre, rol: usuario.rol }
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  return session
+function iniciarSesion({ sesion, token }) {
+  setToken(token)
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(sesion))
+  return sesion
 }
 
-// Se puede entrar con el usuario o con el mail, sin distinguir mayúsculas.
-export function login(usuarioOMail, password) {
-  const buscado = usuarioOMail.toLowerCase()
-  const usuario = usuarios().find(
-    (u) => (u.username.toLowerCase() === buscado || u.email?.toLowerCase() === buscado) && u.password === password
-  )
-  return usuario ? iniciarSesion(usuario) : null
-}
-
-// Si el texto ya es el usuario o el mail de alguna cuenta (sin distinguir mayúsculas).
-function enUso(texto) {
-  return usuarios().some((u) => u.username.toLowerCase() === texto || u.email?.toLowerCase() === texto)
-}
-
-// Devuelve { campo: mensaje } con los errores; vacío si la cuenta se puede crear.
-export function validateRegistro({ nombre, usuario, email, password }) {
-  const errores = {}
-  const user = usuario.trim().toLowerCase()
-  const mail = email.trim().toLowerCase()
-  if (!nombre.trim()) errores.nombre = 'El nombre es obligatorio.'
-  if (!user) errores.usuario = 'El usuario es obligatorio.'
-  else if (!/^[a-z0-9._-]{3,20}$/.test(user)) {
-    errores.usuario = 'El usuario tiene que tener de 3 a 20 caracteres: letras, números, punto, guion o guion bajo.'
-  } else if (enUso(user)) errores.usuario = 'Ese usuario ya está en uso.'
-  if (!mail) errores.email = 'El mail es obligatorio.'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) errores.email = 'El mail no es válido.'
-  else if (enUso(mail)) errores.email = 'Ya hay una cuenta con ese mail.'
-  if (password.length < PASSWORD_MINIMA) errores.password = `La contraseña tiene que tener al menos ${PASSWORD_MINIMA} caracteres.`
-  return errores
-}
-
-// Crea la cuenta de alumno e inicia la sesión. Validar antes con validateRegistro.
-export function registrarAlumno({ nombre, usuario, email, password }) {
-  const alumno = {
-    username: usuario.trim().toLowerCase(),
-    email: email.trim().toLowerCase(),
-    nombre: nombre.trim(),
-    password,
-    rol: 'alumno',
-    fechaRegistro: new Date().toISOString(),
+// Se puede entrar con el usuario o con el mail, sin distinguir mayúsculas. Devuelve null si no coinciden.
+export async function login(usuarioOMail, password) {
+  try {
+    return iniciarSesion(await request('POST', '/api/login', { usuario: usuarioOMail, password }))
+  } catch (e) {
+    if (e.status === 401) return null
+    throw e
   }
-  localStorage.setItem(ALUMNOS_KEY, JSON.stringify([...alumnosRegistrados(), alumno]))
-  return iniciarSesion(alumno)
+}
+
+// Crea la cuenta de alumno e inicia la sesión. Si el usuario o el mail están en uso, lanza ApiError con `errores`.
+export async function registrarAlumno({ nombre, usuario, email, password }) {
+  return iniciarSesion(await request('POST', '/api/registro', { nombre, usuario, email, password }))
 }
 
 export function logout() {
   sessionStorage.removeItem(SESSION_KEY)
+  setToken(null)
+  borrarDatos()
 }
 
+// Sin token (sesiones de antes del servidor) no hay sesión.
 export function getSession() {
+  if (!getToken()) return null
   try {
     return JSON.parse(sessionStorage.getItem(SESSION_KEY))
   } catch {
@@ -100,13 +63,12 @@ export function isLoggedIn() {
   return getSession() !== null
 }
 
-// Las sesiones guardadas antes de que existieran los alumnos no tienen rol: eran de profesor.
 export function getRole(session = getSession()) {
-  return session?.rol ?? 'profesor'
+  return session?.rol ?? null
 }
 
 const HOME = { alumno: '/alumno', dev: '/dev', profesor: '/' }
 
 export function homePath(session = getSession()) {
-  return HOME[getRole(session)] ?? '/'
+  return HOME[getRole(session)] ?? '/login'
 }

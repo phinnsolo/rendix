@@ -10,8 +10,8 @@ export default function ClaseEditPage() {
 
   if (!clase) return <NotFound title="Clase no encontrada" backTo="/dev" backLabel="Volver a clases" />
 
-  function handleSubmit(values) {
-    updateClase(id, values)
+  async function handleSubmit(values) {
+    await updateClase(id, values)
     navigate(`/dev/clases/${id}`)
   }
 

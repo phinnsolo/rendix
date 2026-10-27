@@ -1,11 +1,13 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getAlumnos, nombreDe } from '../auth.js'
 import { getClase } from '../clasesStore.js'
 import { getDocument, isPublished } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
-import { asignarAlumnos, estadoTurno, formatHorario, getApertura, getTurno, quitarAlumno } from '../turnosStore.js'
+import { asignarAlumnos, estadoTurno, formatHorario, getSeguimiento, getTurno, quitarAlumno } from '../turnosStore.js'
+import { now } from '../clock.js'
+import { formatRemaining } from '../components/ExamHeader.jsx'
 import NotFound from '../components/NotFound.jsx'
 import BackLink from '../components/BackLink.jsx'
 
@@ -17,24 +19,55 @@ const ESTADO_TURNO = {
 
 const ESTADO_ALUMNO = {
   'no-abrio': { label: 'No abrió', className: 'chip' },
-  abierto: { label: 'Abierto', className: 'chip pending' },
-  enviado: { label: 'Enviado', className: 'chip published' },
+  'en-linea': { label: 'En línea', className: 'chip pending' },
+  desconectado: { label: 'Desconectado', className: 'chip incorrect' },
+  entregado: { label: 'Entregado', className: 'chip published' },
+  'entregado-sistema': { label: 'Entregado por sistema', className: 'chip published' },
   'no-completo': { label: 'No completó', className: 'chip incorrect' },
+}
+
+const SEGUIMIENTO_MS = 2000
+// Sin latido en este tiempo (el alumno late cada 5 s), se lo considera desconectado.
+const DESCONECTADO_MS = 12_000
+
+function estadoAlumno({ sesion, entrega }, estadoDelTurno, ahora) {
+  if (entrega) return entrega.enviadoPorSistema ? 'entregado-sistema' : 'entregado'
+  if (!sesion) return estadoDelTurno === 'finalizado' ? 'no-completo' : 'no-abrio'
+  if (sesion.estado !== 'en-curso') return 'entregado-sistema'
+  return ahora - Date.parse(sesion.ultimoLatido) > DESCONECTADO_MS ? 'desconectado' : 'en-linea'
+}
+
+function haceCuanto(iso, ahora) {
+  const s = Math.max(0, Math.round((ahora - Date.parse(iso)) / 1000))
+  if (s < 60) return `hace ${s} s`
+  return `hace ${Math.floor(s / 60)} min`
 }
 
 // Un turno asignado a un parcial: alumnos asignados y seguimiento de quién abrió y quién envió el examen.
 // El turno en sí (fecha y hora) se cambia desde Editar en el parcial.
 export default function TurnoDetailPage() {
   const { id: parcialId, turnoId } = useParams()
-  // El seguimiento se vuelve a leer cada pocos segundos y cuando otra pestaña cambia el almacenamiento.
-  const [, refresh] = useReducer((n) => n + 1, 0)
+  // El seguimiento se pide al servidor cada 2 s; entre pedidos, el tiempo restante corre con la hora del servidor.
+  const [seguimiento, setSeguimiento] = useState(null)
+  const [sinConexion, setSinConexion] = useState(false)
+  const [ahora, setAhora] = useState(now)
+  const refresh = useCallback(() => {
+    getSeguimiento(turnoId).then(
+      (datos) => {
+        setSeguimiento(new Map(datos.alumnos.map((a) => [a.username, a])))
+        setSinConexion(false)
+      },
+      () => setSinConexion(true)
+    )
+  }, [turnoId])
   useEffect(() => {
-    const timer = setInterval(refresh, 3000)
-    window.addEventListener('storage', refresh)
-    return () => {
-      clearInterval(timer)
-      window.removeEventListener('storage', refresh)
-    }
+    refresh()
+    const timer = setInterval(refresh, SEGUIMIENTO_MS)
+    return () => clearInterval(timer)
+  }, [refresh])
+  useEffect(() => {
+    const timer = setInterval(() => setAhora(now()), 1000)
+    return () => clearInterval(timer)
   }, [])
 
   const turno = getTurno(turnoId)
@@ -48,23 +81,32 @@ export default function TurnoDetailPage() {
 
   const filas = turno.alumnos
     .map((username) => {
-      const entrega = entregas.get(username) ?? null
-      const apertura = getApertura(turno, username) ?? entrega?.fechaInicio ?? null
-      let estadoAlumno = 'no-abrio'
-      if (entrega) estadoAlumno = 'enviado'
-      else if (apertura) estadoAlumno = estado === 'finalizado' ? 'no-completo' : 'abierto'
-      return { username, nombre: nombreDe(username), entrega, apertura, estado: estadoAlumno }
+      const vivo = seguimiento?.get(username) ?? { sesion: null, entrega: entregas.get(username) ?? null }
+      const { sesion, entrega } = vivo
+      const enCurso = !entrega && sesion?.estado === 'en-curso'
+      return {
+        username,
+        nombre: nombreDe(username),
+        entrega,
+        sesion,
+        apertura: sesion?.apertura ?? entrega?.fechaInicio ?? null,
+        restante: enCurso ? Math.max(0, Math.ceil((Date.parse(sesion.deadline) - ahora) / 1000)) : null,
+        estado: estadoAlumno(vivo, estado, ahora),
+      }
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true }))
   const total = filas.length
   const abrieron = filas.filter((f) => f.apertura || f.entrega).length
   const enviaron = filas.filter((f) => f.entrega).length
 
-  function handleQuitar(username) {
-    if (window.confirm(`¿Quitar a ${nombreDe(username)} del turno?`)) {
-      quitarAlumno(turno.id, username)
-      refresh()
+  async function handleQuitar(username) {
+    if (!window.confirm(`¿Quitar a ${nombreDe(username)} del turno?`)) return
+    try {
+      await quitarAlumno(turno.id, username)
+    } catch (e) {
+      window.alert(`No se pudo quitar. ${e.message}`)
     }
+    refresh()
   }
 
   return (
@@ -93,6 +135,7 @@ export default function TurnoDetailPage() {
               Abrieron <strong>{abrieron}</strong> de {total} · Enviaron <strong>{enviaron}</strong> de {total}
             </p>
           )}
+          {sinConexion && <p className="error small" role="status">Sin conexión con el servidor: el seguimiento no se está actualizando.</p>}
         </div>
         {total === 0 ? (
           <p className="muted">Todavía no asignaste alumnos a este turno.</p>
@@ -103,6 +146,8 @@ export default function TurnoDetailPage() {
                 <tr>
                   <th>Alumno</th>
                   <th>Estado</th>
+                  <th>Tiempo restante</th>
+                  <th>Sincronización</th>
                   <th>Apertura</th>
                   <th>Envío</th>
                   <th aria-label="Acciones" />
@@ -116,6 +161,10 @@ export default function TurnoDetailPage() {
                       <span className="muted small table-sub">{fila.username}</span>
                     </td>
                     <td><span className={ESTADO_ALUMNO[fila.estado].className}>{ESTADO_ALUMNO[fila.estado].label}</span></td>
+                    <td className={fila.restante !== null && fila.restante <= 60 ? 'num urgent' : 'num'}>
+                      {fila.restante === null ? '—' : formatRemaining(fila.restante)}
+                    </td>
+                    <td><Sincronizacion fila={fila} ahora={ahora} /></td>
                     <td>{fila.apertura ? formatDate(fila.apertura) : '—'}</td>
                     <td>{fila.entrega ? formatDate(fila.entrega.fechaEntrega) : '—'}</td>
                     <td className="table-actions">
@@ -141,6 +190,14 @@ export default function TurnoDetailPage() {
   )
 }
 
+// Si el alumno tiene cambios sin subir (problemas de red) o cuándo se guardó lo último.
+function Sincronizacion({ fila, ahora }) {
+  if (fila.entrega || !fila.sesion) return <span className="muted">—</span>
+  if (fila.sesion.pendientes) return <span className="chip pending">Cambios pendientes</span>
+  if (!fila.sesion.ultimoGuardado) return <span className="muted small">Sin cambios guardados</span>
+  return <span className="muted small">Guardado {haceCuanto(fila.sesion.ultimoGuardado, ahora)}</span>
+}
+
 // Buscar alumnos y asignar uno o varios al turno: los de la clase del parcial o, si no tiene clase, todos
 // los registrados. Si ya estaban en otro turno del parcial que no empezó, se los mueve a este.
 function AsignarAlumnos({ turno, clase, onAsignados }) {
@@ -164,16 +221,16 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
     )
   }
 
-  function handleAsignar() {
+  async function handleAsignar() {
     try {
-      const rechazados = asignarAlumnos(turno.id, seleccion)
+      const rechazados = await asignarAlumnos(turno.id, seleccion)
       setMensaje(
         rechazados.length === 0
           ? ''
           : `No se asignó a ${rechazados.map(nombreDe).join(', ')}: ya rinde este examen en otro turno que empezó.`
       )
     } catch (e) {
-      setMensaje(e.message.startsWith('El turno') ? e.message : 'No se pudo guardar: el almacenamiento del navegador está lleno.')
+      setMensaje(`No se pudo asignar. ${e.message}`)
     }
     setSeleccion([])
     onAsignados()

@@ -1,51 +1,31 @@
-// Único módulo que accede al almacenamiento de documentos (parciales).
-// Para migrar a una base de datos, reemplazar estas funciones.
-// Cada profesor tiene su propia clave: rendix_documents_<username>.
+// Parciales que ve el usuario logueado (de getDatos()) y cambios a través de la API.
+// El profesor ve los suyos; el alumno, los publicados de sus turnos (sin las respuestas correctas).
 
-import { getSession } from './auth.js'
-import { textFromBlocks } from './documentBlocks.js'
-import { deleteSubmissionsFor } from './submissionsStore.js'
-import { deleteTurnosFor } from './turnosStore.js'
+import { request } from './api.js'
+import { getDatos, recargarDatos } from './datos.js'
 
 export const ESTADOS = { borrador: 'borrador', publicado: 'publicado' }
-
-function storageKey(username = getSession().username) {
-  return `rendix_documents_${username}`
-}
-
-function readAll(username) {
-  try {
-    return JSON.parse(localStorage.getItem(storageKey(username))) || []
-  } catch {
-    return []
-  }
-}
-
-function writeAll(documents) {
-  localStorage.setItem(storageKey(), JSON.stringify(documents))
-}
 
 function byFechaModificacion(a, b) {
   return b.fechaModificacion.localeCompare(a.fechaModificacion)
 }
 
-// Los documentos creados antes de que existiera el estado se consideran borradores.
 export function isPublished(doc) {
   return doc?.estado === ESTADOS.publicado
 }
 
 export function getDocuments() {
-  return readAll().sort(byFechaModificacion)
+  return [...getDatos().documentos].sort(byFechaModificacion)
 }
 
 export function getDocument(id) {
-  return readAll().find((doc) => doc.id === id) || null
+  return getDatos().documentos.find((doc) => doc.id === id) || null
 }
 
 // Parciales publicados de un profesor, para la vista del alumno. Nunca devuelve borradores.
 export function getPublishedDocumentsOf(profesor) {
-  return readAll(profesor)
-    .filter((doc) => isPublished(doc) && (doc.profesor ?? profesor) === profesor)
+  return getDatos()
+    .documentos.filter((doc) => isPublished(doc) && doc.profesor === profesor)
     .sort((a, b) => b.fechaPublicacion.localeCompare(a.fechaPublicacion))
 }
 
@@ -58,70 +38,32 @@ export function getDocumentsDeClase(claseId) {
   return getDocuments().filter((doc) => doc.claseId === claseId)
 }
 
-// Ids de los parciales (publicados o no) que un profesor tiene en una clase.
-export function getDocumentIdsDeClase(profesor, claseId) {
-  return readAll(profesor).filter((doc) => doc.claseId === claseId).map((doc) => doc.id)
-}
-
 // Parciales publicados de una clase, de todos sus profesores. Para la vista del alumno.
 export function getPublishedDocumentsDeClase(clase) {
   return clase.profesores.flatMap(getPublishedDocumentsOf).filter((doc) => doc.claseId === clase.id)
 }
 
-export function createDocument({ claseId, titulo, tema, herramientas, duracion, bloques }) {
-  const ahora = new Date().toISOString()
-  const doc = {
-    id: crypto.randomUUID(),
-    profesor: getSession().username,
-    estado: ESTADOS.borrador,
-    claseId,
-    titulo,
-    tema,
-    herramientas,
-    duracion,
-    contenido: textFromBlocks(bloques),
-    bloques,
-    fechaCreacion: ahora,
-    fechaModificacion: ahora,
-  }
-  writeAll([...readAll(), doc])
-  return doc
+// Crea el parcial con sus turnos (`horarios`, ver turnosStore). Los alumnos de la clase quedan asignados al
+// primer turno.
+export async function createDocument({ claseId, titulo, tema, herramientas, duracion, bloques, horarios }) {
+  const { documento } = await request('POST', '/api/documentos', { claseId, titulo, tema, herramientas, duracion, bloques, horarios })
+  await recargarDatos()
+  return documento
 }
 
-export function updateDocument(id, { claseId, titulo, tema, herramientas, duracion, bloques }) {
-  let updated = null
-  const documents = readAll().map((doc) => {
-    if (doc.id !== id) return doc
-    updated = {
-      ...doc,
-      claseId,
-      titulo,
-      tema,
-      herramientas,
-      duracion,
-      contenido: textFromBlocks(bloques),
-      bloques,
-      fechaModificacion: new Date().toISOString(),
-    }
-    return updated
-  })
-  writeAll(documents)
-  return updated
+export async function updateDocument(id, { claseId, titulo, tema, herramientas, duracion, bloques, horarios }) {
+  const { documento } = await request('PUT', `/api/documentos/${id}`, { claseId, titulo, tema, herramientas, duracion, bloques, horarios })
+  await recargarDatos()
+  return documento
 }
 
-export function publishDocument(id) {
-  const username = getSession().username
-  writeAll(
-    readAll().map((doc) =>
-      doc.id === id
-        ? { ...doc, profesor: doc.profesor ?? username, estado: ESTADOS.publicado, fechaPublicacion: new Date().toISOString() }
-        : doc
-    )
-  )
+export async function publishDocument(id) {
+  await request('POST', `/api/documentos/${id}/publicar`)
+  await recargarDatos()
 }
 
-export function deleteDocument(id) {
-  writeAll(readAll().filter((doc) => doc.id !== id))
-  deleteSubmissionsFor(id)
-  deleteTurnosFor(id)
+// También se borran sus turnos, sesiones y entregas.
+export async function deleteDocument(id) {
+  await request('DELETE', `/api/documentos/${id}`)
+  await recargarDatos()
 }
