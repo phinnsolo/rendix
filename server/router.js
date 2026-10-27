@@ -429,7 +429,8 @@ ruta('PUT', '/api/entregas/:id/correccion', 'profesor', async ({ params, body, s
 })
 
 // --- Examen (alumno)
-// La sesión guarda la hora límite: la duración desde la apertura o el fin del turno, lo que llegue antes.
+// La sesión guarda la hora límite: el fin del turno (inicio + duración), igual para todos los alumnos. El tiempo
+// corre desde que empieza el turno, no desde que cada uno abre el parcial: quien abre tarde tiene menos tiempo.
 // Toda la hora es la del servidor.
 
 async function turnoDelAlumno(client, parcialId, alumno) {
@@ -484,10 +485,7 @@ ruta('POST', '/api/examen/:parcialId/comenzar', 'alumno', async ({ params, sesio
     if (estadoTurno(aTurno(turno), ahora) !== 'en-curso') {
       throw new HttpError(409, 'El turno no está en curso: no se puede abrir el parcial.', { codigo: 'fuera-de-turno' })
     }
-    const { rows: [doc] } = await c.query('select duracion from documentos where id = $1', [params.parcialId])
-    const fin = turnoFin(aTurno(turno)).getTime()
-    const duracion = getDuracion(doc)
-    const deadline = duracion == null ? fin : Math.min(ahora + duracion * 60_000, fin)
+    const deadline = turnoFin(aTurno(turno)).getTime()
     const { rows } = await c.query(
       `insert into sesiones_examen (turno_id, alumno, parcial_id, apertura, deadline, ultimo_latido)
        values ($1, $2, $3, $4, $5, $4) on conflict do nothing returning *`,

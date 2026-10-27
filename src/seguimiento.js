@@ -1,6 +1,8 @@
 // Estado en vivo de cada alumno de un turno, a partir de su sesión y su entrega (ver GET /api/turnos/:id/seguimiento).
 // Lo usan el detalle del turno y la sección Monitoreo.
 
+import { turnoFin, turnoInicio } from './turnos.js'
+
 export const ESTADO_ALUMNO = {
   'no-abrio': { label: 'No abrió', className: 'chip' },
   'en-linea': { label: 'En línea', className: 'chip pending' },
@@ -27,18 +29,12 @@ export function haceCuanto(iso, ahora) {
   return `hace ${Math.floor(s / 60)} min`
 }
 
-// Segundos que le quedan al alumno, o null si no está resolviendo.
-export function restanteAlumno({ sesion, entrega }, ahora) {
-  if (entrega || sesion?.estado !== 'en-curso') return null
-  return Math.max(0, Math.ceil((Date.parse(sesion.deadline) - ahora) / 1000))
-}
-
-// Parte del tiempo del alumno que ya usó, de 0 a 1. Entregado: 1; sin abrir: 0.
-export function progreso({ sesion, entrega }, ahora) {
+// Parte del tiempo del turno que ya pasó, de 0 a 1 (el tiempo corre igual para todos). Entregado: 1; sin abrir: 0.
+export function progreso({ sesion, entrega }, turno, ahora) {
   if (entrega || (sesion && sesion.estado !== 'en-curso')) return 1
   if (!sesion) return 0
-  const inicio = Date.parse(sesion.apertura)
-  const total = Date.parse(sesion.deadline) - inicio
+  const inicio = turnoInicio(turno).getTime()
+  const total = turnoFin(turno).getTime() - inicio
   return total > 0 ? Math.min(1, Math.max(0, (ahora - inicio) / total)) : 1
 }
 

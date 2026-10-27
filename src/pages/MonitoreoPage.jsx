@@ -5,7 +5,7 @@ import { now } from '../clock.js'
 import { ZONA_HORARIA_IANA } from '../config.js'
 import { formatRemaining } from '../components/ExamHeader.jsx'
 import {
-  ESTADO_ALUMNO, SEGUIMIENTO_MS, estadoAlumno, haceCuanto, progreso, restanteAlumno, ultimaActualizacion,
+  ESTADO_ALUMNO, SEGUIMIENTO_MS, estadoAlumno, haceCuanto, progreso, ultimaActualizacion,
 } from '../seguimiento.js'
 import { formatHorario, getMonitoreo, turnoFin } from '../turnosStore.js'
 
@@ -114,14 +114,13 @@ function PanelTurno({ turno, ahora }) {
               <tr>
                 <th>Estudiante</th>
                 <th>Estado</th>
-                <th>Tiempo restante</th>
                 <th>Última actualización</th>
                 <th aria-label="Cambios pendientes" />
               </tr>
             </thead>
             <tbody>
               {filas.map((fila) => (
-                <FilaAlumno key={fila.username} fila={fila} ahora={ahora} />
+                <FilaAlumno key={fila.username} fila={fila} turno={turno} ahora={ahora} />
               ))}
             </tbody>
           </table>
@@ -131,11 +130,10 @@ function PanelTurno({ turno, ahora }) {
   )
 }
 
-function FilaAlumno({ fila, ahora }) {
-  const restante = restanteAlumno(fila, ahora)
+function FilaAlumno({ fila, turno, ahora }) {
   const ultima = ultimaActualizacion(fila)
   const pendiente = fila.sesion?.pendientes && !fila.entrega
-  const usado = Math.round(progreso(fila, ahora) * 100)
+  const usado = Math.round(progreso(fila, turno, ahora) * 100)
 
   return (
     <tr className={`monitor-row ${fila.estado}`}>
@@ -148,12 +146,9 @@ function FilaAlumno({ fila, ahora }) {
           <span className="monitor-dot" aria-hidden="true" />
           {ESTADO_ALUMNO[fila.estado].label}
         </span>
-        <span className="monitor-bar" role="progressbar" aria-label="Tiempo usado" aria-valuenow={usado} aria-valuemin={0} aria-valuemax={100}>
+        <span className="monitor-bar" role="progressbar" aria-label="Tiempo del turno que ya pasó" aria-valuenow={usado} aria-valuemin={0} aria-valuemax={100}>
           <span style={{ width: `${usado}%` }} />
         </span>
-      </td>
-      <td className={restante !== null && restante <= 60 ? 'monitor-num urgent' : 'monitor-num'}>
-        {restante === null ? '—' : formatRemaining(restante)}
       </td>
       <td className="monitor-num">
         {ultima ? (
