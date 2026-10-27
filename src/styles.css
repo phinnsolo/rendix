@@ -408,7 +408,7 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .monitor-row.en-linea { --state: var(--success); }
 .monitor-row.desconectado { --state: var(--danger); }
 .monitor-row.desconectado .monitor-estado-label { color: var(--danger); }
-.monitor-row.entregado, .monitor-row.entregado-sistema { --state: var(--primary); }
+.monitor-row.entregado, .monitor-row.entregado-tiempo, .monitor-row.entregado-sistema { --state: var(--primary); }
 .monitor-row.entregado-sistema .monitor-bar > span { background: repeating-linear-gradient(-45deg, var(--primary) 0 6px, var(--primary-hover) 6px 9px); opacity: 0.75; }
 .monitor-row.no-abrio .monitor-estado-label, .monitor-row.no-completo .monitor-estado-label { color: var(--muted); font-weight: 400; }
 .monitor-pending-cell { width: 2rem; text-align: center; }

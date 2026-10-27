@@ -7,7 +7,7 @@ export default function SubmissionChips({ entrega }) {
       {isGraded(entrega)
         ? <span className="chip published">Nota: {entrega.correccion.nota}</span>
         : <span className="chip pending">Sin corregir</span>}
-      {entrega.enviadoPorTiempo && <span className="chip">Enviado por tiempo</span>}
+      {entrega.enviadoPorTiempo && <span className="chip">Entregado por tiempo</span>}
       {entrega.enviadoPorSistema && <span className="chip">Entregado por sistema</span>}
     </>
   )

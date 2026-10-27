@@ -33,7 +33,7 @@ export default function StudentExamCard({ turno, doc, entrega, profesor, claseId
       <p className="exam-turno">{formatHorario(turno)}</p>
       <p className="muted small">
         {profesor?.nombre}{tema && ` · ${tema}`} · Duración: {formatDuracion(getDuracion(doc))}
-        {entrega && ` · Entregado: ${formatDate(entrega.fechaEntrega)}`}
+        {entrega && ` · ${entrega.enviadoPorTiempo || entrega.enviadoPorSistema ? 'Enviado por vencimiento' : 'Entregado'}: ${formatDate(entrega.fechaEntrega)}`}
       </p>
       {!entrega && !vencido && (
         <div className="exam-tools">

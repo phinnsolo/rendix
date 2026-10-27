@@ -10,7 +10,7 @@ import {
 import { formatHorario, getMonitoreo, turnoFin } from '../turnosStore.js'
 
 // Primero los que pueden tener un problema, después los que están rindiendo y al final los que terminaron.
-const ORDEN = ['desconectado', 'en-linea', 'no-abrio', 'no-completo', 'entregado-sistema', 'entregado']
+const ORDEN = ['desconectado', 'en-linea', 'no-abrio', 'no-completo', 'entregado-sistema', 'entregado-tiempo', 'entregado']
 
 const hora = (iso) => new Date(iso).toLocaleTimeString('es-AR', { timeZone: ZONA_HORARIA_IANA, hour12: false })
 
