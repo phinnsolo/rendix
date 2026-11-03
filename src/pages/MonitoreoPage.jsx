@@ -1,40 +1,40 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { nombreDe } from '../auth.js'
 import { now } from '../clock.js'
 import { ZONA_HORARIA_IANA } from '../config.js'
 import { formatRemaining } from '../components/ExamHeader.jsx'
+import AlumnoActividad, { BotonReanudar, EstadoChip } from '../components/AlumnoActividad.jsx'
 import {
-  ESTADO_ALUMNO, SEGUIMIENTO_MS, estadoAlumno, haceCuanto, progreso, ultimaActualizacion,
+  SEGUIMIENTO_MS, detalleEstado, estadoAlumno, haceCuanto, progreso, ultimaActualizacion,
 } from '../seguimiento.js'
 import { formatHorario, getMonitoreo, turnoFin } from '../turnosStore.js'
+import { usePolling } from '../usePolling.js'
 
-// Primero los que pueden tener un problema, después los que están rindiendo y al final los que terminaron.
-const ORDEN = ['desconectado', 'en-linea', 'no-abrio', 'no-completo', 'entregado-sistema', 'entregado-tiempo', 'entregado']
+// Primero los incidentes (requieren una decisión del profesor), después los que están rindiendo y al final los que
+// terminaron.
+const ORDEN = ['incidente', 'en-curso', 'no-abrio', 'no-completo', 'salio-entrego', 'entregado']
 
 const hora = (iso) => new Date(iso).toLocaleTimeString('es-AR', { timeZone: ZONA_HORARIA_IANA, hour12: false })
 
-// Turnos del profesor que se están tomando ahora: tiempo restante, quién está en línea, quién se desconectó
-// y quién tiene cambios sin sincronizar. Se pide al servidor cada 2 s; el tiempo corre con la hora del servidor.
+// Turnos del profesor que se están tomando ahora: tiempo restante, estado de cada alumno en el modo restringido
+// (En curso, Entregado, Salió y se entregó, Incidente) y quién tiene cambios sin sincronizar. Se pide al servidor
+// cada 2 s sin superponer pedidos; el tiempo corre con la hora del servidor. Click en un alumno: su actividad.
 export default function MonitoreoPage() {
   const [turnos, setTurnos] = useState(null)
   const [sinConexion, setSinConexion] = useState(false)
   const [ahora, setAhora] = useState(now)
+  const [detalle, setDetalle] = useState(null) // { turnoId, username }
 
-  const refresh = useCallback(() => {
-    getMonitoreo().then(
-      (datos) => {
-        setTurnos(datos.turnos)
-        setSinConexion(false)
-      },
-      () => setSinConexion(true)
-    )
-  }, [])
-  useEffect(() => {
-    refresh()
-    const timer = setInterval(refresh, SEGUIMIENTO_MS)
-    return () => clearInterval(timer)
-  }, [refresh])
+  const refresh = usePolling(async () => {
+    try {
+      const datos = await getMonitoreo()
+      setTurnos(datos.turnos)
+      setSinConexion(false)
+    } catch {
+      setSinConexion(true)
+    }
+  }, SEGUIMIENTO_MS)
   useEffect(() => {
     const timer = setInterval(() => setAhora(now()), 1000)
     return () => clearInterval(timer)
@@ -54,25 +54,43 @@ export default function MonitoreoPage() {
       ) : (
         <>
           {sinConexion && <p className="error" role="status">Sin conexión con el servidor: los datos pueden estar desactualizados.</p>}
-          {turnos.map((turno) => <PanelTurno key={turno.id} turno={turno} ahora={ahora} />)}
+          {turnos.map((turno) => (
+            <PanelTurno
+              key={turno.id}
+              turno={turno}
+              ahora={ahora}
+              onDetalle={(username) => setDetalle({ turnoId: turno.id, username })}
+              onCambio={refresh}
+            />
+          ))}
         </>
+      )}
+      {detalle && (
+        <AlumnoActividad
+          key={`${detalle.turnoId}:${detalle.username}`}
+          turnoId={detalle.turnoId}
+          username={detalle.username}
+          onCerrar={() => setDetalle(null)}
+          onCambio={refresh}
+        />
       )}
     </>
   )
 }
 
-function PanelTurno({ turno, ahora }) {
+function PanelTurno({ turno, ahora, onDetalle, onCambio }) {
   const restante = Math.max(0, Math.ceil((turnoFin(turno).getTime() - ahora) / 1000))
   const filas = turno.alumnos
-    .map((a) => ({ ...a, nombre: nombreDe(a.username), estado: estadoAlumno(a, 'en-curso', ahora) }))
+    .map((a) => ({ ...a, nombre: nombreDe(a.username), estado: estadoAlumno(a, 'en-curso') }))
     .sort((a, b) =>
       ORDEN.indexOf(a.estado) - ORDEN.indexOf(b.estado) ||
       Number(Boolean(b.sesion?.pendientes)) - Number(Boolean(a.sesion?.pendientes)) ||
       a.nombre.localeCompare(b.nombre, 'es', { numeric: true })
     )
-  const pendientes = filas.filter((f) => f.sesion?.pendientes && !f.entrega).length
-  const enLinea = filas.filter((f) => f.estado === 'en-linea').length
+  const pendientes = filas.filter((f) => f.sesion?.pendientes && f.estado === 'en-curso').length
+  const enCurso = filas.filter((f) => f.estado === 'en-curso').length
   const entregaron = filas.filter((f) => f.entrega).length
+  const incidentes = filas.filter((f) => f.estado === 'incidente').length
 
   return (
     <section className="card monitor" aria-labelledby={`monitor-${turno.id}`}>
@@ -83,7 +101,7 @@ function PanelTurno({ turno, ahora }) {
         <p className="muted small">{formatHorario(turno)}</p>
       </div>
 
-      <div className="monitor-stats">
+      <div className="monitor-stats three">
         <div className="monitor-stat">
           <IconoReloj />
           <div>
@@ -93,13 +111,21 @@ function PanelTurno({ turno, ahora }) {
             </span>
           </div>
         </div>
+        <div className={incidentes > 0 ? 'monitor-stat incident' : 'monitor-stat'}>
+          <IconoAlerta />
+          <div>
+            <span className="monitor-stat-label">Incidentes</span>
+            <span className="monitor-stat-value">{incidentes}</span>
+            <span className="monitor-stat-note">{incidentes > 0 ? 'Esperan tu decisión' : 'Sin salidas del modo restringido'}</span>
+          </div>
+        </div>
         <div className={pendientes > 0 ? 'monitor-stat pending' : 'monitor-stat'}>
           <IconoCampana />
           <div>
             <span className="monitor-stat-label">Cambios pendientes</span>
             <span className="monitor-stat-value">{pendientes}</span>
             <span className="monitor-stat-note">
-              {enLinea} en línea · {entregaron} de {filas.length} entregaron
+              {enCurso} en curso · {entregaron} de {filas.length} entregaron
             </span>
           </div>
         </div>
@@ -112,15 +138,15 @@ function PanelTurno({ turno, ahora }) {
           <table className="monitor-table">
             <thead>
               <tr>
-                <th>Estudiante</th>
+                <th>Nombre</th>
                 <th>Estado</th>
-                <th>Última actualización</th>
-                <th aria-label="Cambios pendientes" />
+                <th>Última actividad</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filas.map((fila) => (
-                <FilaAlumno key={fila.username} fila={fila} turno={turno} ahora={ahora} />
+                <FilaAlumno key={fila.username} fila={fila} turno={turno} ahora={ahora} onDetalle={onDetalle} onCambio={onCambio} />
               ))}
             </tbody>
           </table>
@@ -130,23 +156,29 @@ function PanelTurno({ turno, ahora }) {
   )
 }
 
-function FilaAlumno({ fila, turno, ahora }) {
+function FilaAlumno({ fila, turno, ahora, onDetalle, onCambio }) {
   const ultima = ultimaActualizacion(fila)
-  const pendiente = fila.sesion?.pendientes && !fila.entrega
+  const pendiente = fila.sesion?.pendientes && fila.estado === 'en-curso'
   const usado = Math.round(progreso(fila, turno, ahora) * 100)
+  const detalle = detalleEstado(fila, ahora)
+  const abrir = () => onDetalle(fila.username)
 
   return (
-    <tr className={`monitor-row ${fila.estado}`}>
+    <tr className={`monitor-row ${fila.estado}`} onClick={abrir}>
       <td>
-        {fila.nombre}
+        <button type="button" className="link-button monitor-name" onClick={(e) => { e.stopPropagation(); abrir() }}>
+          {fila.nombre}
+        </button>
         <span className="muted small table-sub">{fila.username}</span>
       </td>
       <td className="monitor-estado">
         <span className="monitor-estado-label">
           <span className="monitor-dot" aria-hidden="true" />
-          {ESTADO_ALUMNO[fila.estado].label}
+          <EstadoChip estado={fila.estado} />
+          {pendiente && <span className="monitor-pending" role="img" aria-label="Cambios pendientes de sincronizar" title="Cambios pendientes de sincronizar" />}
         </span>
-        <span className="monitor-bar" role="progressbar" aria-label="Tiempo del turno que ya pasó" aria-valuenow={usado} aria-valuemin={0} aria-valuemax={100}>
+        {detalle && <span className="muted small table-sub">{detalle}</span>}
+        <span className="monitor-bar" role="progressbar" aria-label="Tiempo que ya pasó" aria-valuenow={usado} aria-valuemin={0} aria-valuemax={100}>
           <span style={{ width: `${usado}%` }} />
         </span>
       </td>
@@ -158,8 +190,11 @@ function FilaAlumno({ fila, turno, ahora }) {
           </>
         ) : '—'}
       </td>
-      <td className="monitor-pending-cell">
-        {pendiente && <span className="monitor-pending" role="img" aria-label="Cambios pendientes de sincronizar" title="Cambios pendientes de sincronizar" />}
+      <td onClick={(e) => e.stopPropagation()}>
+        <div className="table-actions">
+          {fila.estado === 'incidente' && <BotonReanudar turnoId={turno.id} username={fila.username} onReanudado={onCambio} />}
+          <button type="button" className="secondary" onClick={abrir}>Ver actividad</button>
+        </div>
       </td>
     </tr>
   )
@@ -180,4 +215,8 @@ function IconoReloj() {
 
 function IconoCampana() {
   return <Icono><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z" /><path d="M10 20a2 2 0 0 0 4 0" /></Icono>
+}
+
+function IconoAlerta() {
+  return <Icono><path d="M12 3.5 2.8 19.5h18.4z" /><path d="M12 10v4.5" /><path d="M12 17.4v.1" /></Icono>
 }

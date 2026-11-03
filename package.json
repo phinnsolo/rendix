@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
+    "db:migrate": "node --env-file=.env scripts/migrate.js"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -25,6 +27,8 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
+    "@electric-sql/pglite-socket": "^0.2.18",
     "@vitejs/plugin-react": "^6.1.2",
     "vite": "^8.3.3"
   }

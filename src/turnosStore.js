@@ -54,6 +54,16 @@ export function getMonitoreo() {
   return request('GET', '/api/monitoreo')
 }
 
+// Detalle de un alumno del turno: su sesión, su entrega y la línea de tiempo de eventos del modo restringido.
+export function getActividadAlumno(turnoId, username) {
+  return request('GET', `/api/turnos/${turnoId}/alumnos/${encodeURIComponent(username)}/eventos`)
+}
+
+// Reanuda un examen en Incidente. `eventoId` hace que un reintento no reanude dos veces.
+export function reanudarExamen(turnoId, username, eventoId) {
+  return request('POST', `/api/turnos/${turnoId}/alumnos/${encodeURIComponent(username)}/reanudar`, { eventoId })
+}
+
 // --- Alumno (el servidor solo manda sus turnos de parciales publicados)
 
 export function getTurnosDeAlumno(alumno) {

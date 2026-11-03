@@ -407,14 +407,22 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .monitor-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--state); }
 .monitor-bar { display: block; height: 0.4rem; margin-top: 0.35rem; overflow: hidden; border-radius: 999px; background: var(--grid); }
 .monitor-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--state); transition: width 0.9s linear; }
-/* Color de cada estado: verde en línea, rojo desconectado (hay que mirarlo), tinta entregado, rayado si lo entregó el sistema. */
-.monitor-row { --state: var(--border); }
-.monitor-row.en-linea { --state: var(--success); }
-.monitor-row.desconectado { --state: var(--danger); }
-.monitor-row.desconectado .monitor-estado-label { color: var(--danger); }
-.monitor-row.entregado, .monitor-row.entregado-tiempo, .monitor-row.entregado-sistema { --state: var(--primary); }
-.monitor-row.entregado-sistema .monitor-bar > span { background: repeating-linear-gradient(-45deg, var(--primary) 0 6px, var(--primary-hover) 6px 9px); opacity: 0.75; }
+/* Color de cada estado: verde en curso, rojo Incidente (hay que decidir), tinta entregado, rayado si salió con SALIR. */
+.monitor-row { --state: var(--border); cursor: pointer; }
+.monitor-row:hover td { background: #f8faff; }
+.monitor-row.en-curso { --state: var(--success); }
+.monitor-row.incidente { --state: var(--danger); }
+.monitor-row.incidente td { background: var(--danger-tint); }
+.monitor-row.incidente td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.monitor-row.entregado { --state: var(--primary); }
+.monitor-row.salio-entrego { --state: var(--primary); }
+.monitor-row.salio-entrego .monitor-bar > span { background: repeating-linear-gradient(-45deg, var(--primary) 0 6px, var(--primary-hover) 6px 9px); opacity: 0.75; }
 .monitor-row.no-abrio .monitor-estado-label, .monitor-row.no-completo .monitor-estado-label { color: var(--muted); font-weight: 400; }
+.monitor-name { padding: 0; font-size: inherit; color: var(--text); text-align: left; }
+.monitor-name:hover:not(:disabled) { color: var(--primary); }
+.monitor-stats.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.monitor-stat.incident { color: var(--danger); background: var(--danger-tint); }
+.monitor-stat.incident .monitor-stat-value { color: var(--danger); }
 .monitor-pending-cell { width: 2rem; text-align: center; }
 .monitor-pending { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--highlight); border: 2px solid var(--highlight-border); }
 .monitor-empty { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -473,6 +481,81 @@ a.clase-card:hover .clase-nombre { color: var(--primary); }
   .tools-tab { border-radius: var(--radius-sheet); border-left: 1px solid var(--border); width: 4rem; }
   .tools-window { left: 0.5rem; right: 0.5rem; top: auto; bottom: 5rem; transform: none; width: auto; max-height: 70vh; }
   .tools-window-calculadora, .tools-window-geogebra { width: auto; }
+}
+
+/* Modo restringido (Sprint 4) */
+/* Durante el examen no hay navegación: salir del examen es una salida del modo restringido. */
+.modo-restringido .header, .modo-restringido .back-link { display: none; }
+.modo-restringido .container { padding-top: 1.25rem; }
+/* En el mismo evento que detecta la salida, antes de que React vuelva a dibujar. */
+.examen-oculto .exam-content { visibility: hidden; }
+
+.chip.exited { color: var(--primary); border-color: #c3cdea; background: var(--primary-tint); background-image: repeating-linear-gradient(-45deg, transparent 0 5px, rgb(31 63 166 / 0.08) 5px 7px); }
+.chip.incident { color: #fff; border-color: var(--danger); background: var(--danger); }
+
+/* SALIR: rojo lleno, distinto del botón Enviar (tinta azul). */
+.exam-exit, button.solid-danger { background: var(--danger); border-color: var(--danger); color: #fff; letter-spacing: 0.06em; text-transform: uppercase; }
+.exam-exit:hover:not(:disabled), button.solid-danger:hover:not(:disabled) { background: #a5231e; border-color: #a5231e; color: #fff; }
+.exam-exit { margin-left: auto; padding: 0.35rem 1rem; }
+.exam-exit:disabled, button.solid-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.restricted-rules, .restricted-block { margin: 0.75rem 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.restricted-rules { border-left: 4px solid var(--primary); }
+.restricted-title { display: flex; align-items: center; gap: 0.75rem; }
+.restricted-title h2 { margin: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.restricted-title p { margin: 0.15rem 0 0; }
+.restricted-icon { flex: none; width: 2.25rem; height: 2.25rem; color: var(--primary); }
+.restricted-list { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.restricted-list li::marker { color: var(--margin-line); }
+.restricted-salir { color: var(--danger); letter-spacing: 0.04em; }
+.restricted-accept { padding: 0.6rem 0.75rem; border: 1px dashed var(--border); border-radius: var(--radius-control); background: var(--bg); font-weight: 700; }
+.restricted-rules p { margin: 0; }
+.restricted-block { border: 1px solid var(--margin-line); border-left: 4px solid var(--danger); background: var(--danger-tint); }
+.restricted-block p { margin: 0; }
+.restricted-block .restricted-icon { color: var(--danger); }
+.restricted-block .restricted-title h2 { color: var(--danger); }
+.restricted-block.resumed { border-color: var(--success-border); border-left-color: var(--success); background: var(--success-tint); }
+.restricted-block.resumed .restricted-icon, .restricted-block.resumed .restricted-title h2 { color: var(--success); }
+
+/* Diálogos (confirmación y panel lateral) */
+.confirm-dialog { width: min(30rem, calc(100vw - 2rem)); padding: 1.25rem 1.35rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sheet); box-shadow: 0 12px 40px rgb(27 34 48 / 0.22); }
+.confirm-dialog.danger { border-top: 4px solid var(--danger); }
+.confirm-dialog::backdrop, .drawer::backdrop { background: rgb(27 34 48 / 0.45); }
+.confirm-dialog h2 { margin: 0 0 0.5rem; }
+.confirm-dialog.danger h2 { color: var(--danger); }
+.confirm-dialog-body p { margin: 0 0 0.5rem; }
+.confirm-dialog-actions { justify-content: flex-end; margin-top: 1rem; }
+
+.drawer { margin: 0 0 0 auto; height: 100vh; max-height: 100vh; width: min(30rem, 100vw); padding: 1.25rem; color: var(--text); background: var(--surface); border: none; border-left: 1px solid var(--border); box-shadow: -8px 0 30px rgb(27 34 48 / 0.18); overflow-y: auto; }
+.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+.drawer-head h2 { margin: 0; }
+.drawer-close { padding: 0.1rem 0.6rem; font-size: 1.3rem; line-height: 1.2; }
+.drawer-estado { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); }
+.drawer-estado .resume-button { margin-left: auto; }
+.drawer-datos { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1rem; margin: 1rem 0; font-size: 0.92rem; }
+.drawer-datos dt { color: var(--muted); }
+.drawer-datos dd { margin: 0; font-variant-numeric: tabular-nums; }
+.drawer-subtitle { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
+
+/* Línea de tiempo: un renglón por evento, con la hora del servidor al margen (como la hoja con margen rojo). */
+.timeline { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--margin-line); }
+.timeline-item { position: relative; display: grid; grid-template-columns: 4.6rem 1fr; gap: 0.5rem; padding: 0.35rem 0 0.35rem 0.85rem; font-size: 0.92rem; }
+.timeline-item::before { content: ''; position: absolute; left: -0.36rem; top: 0.72rem; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--surface); border: 2px solid var(--border); }
+.timeline-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.timeline-item.signal { color: var(--muted); font-size: 0.85rem; }
+.timeline-item.incident { font-weight: 700; color: var(--danger); }
+.timeline-item.incident::before { background: var(--danger); border-color: var(--danger); }
+.timeline-item.resumed { font-weight: 700; color: var(--success); }
+.timeline-item.resumed::before { background: var(--success); border-color: var(--success); }
+.timeline-item.exited::before, .timeline-item.done::before { background: var(--primary); border-color: var(--primary); }
+.timeline-item.done, .timeline-item.exited { font-weight: 700; }
+
+.resume-button { background: var(--surface); color: var(--danger); border-color: var(--danger); }
+.resume-button:hover:not(:disabled) { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+@media (max-width: 900px) {
+  .monitor-stats.three { grid-template-columns: 1fr; }
+  .monitor-stats.three .monitor-stat + .monitor-stat { border-left: none; border-top: 1px solid var(--border); }
 }
 
 @media (prefers-reduced-motion: reduce) {

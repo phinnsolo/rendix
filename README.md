@@ -28,6 +28,7 @@ Abrir http://localhost:5173. En desarrollo, Vite atiende `/api/*` con la misma A
 1. Crear el proyecto en Neon, o agregar la integración de Neon desde el dashboard de Vercel (crea `DATABASE_URL` sola).
 2. En Vercel → Settings → Environment Variables, agregar `AUTH_SECRET` (un texto largo aleatorio, ej. `openssl rand -hex 32`).
 3. Correr el seed una vez contra esa base: `DATABASE_URL=... node scripts/seed.js` (o con `vercel env pull .env` y `node --env-file=.env scripts/seed.js`). Se puede volver a correr: no pisa datos.
+4. **Migraciones**: en una base que ya existe, aplicar las pendientes de `db/migrations` con `npm run db:migrate` (usa `.env`) o `DATABASE_URL=... node scripts/migrate.js`. Solo agregan columnas, estados, tablas e índices; no borran datos y quedan anotadas en la tabla `migraciones`. El seed también las aplica.
 
 ## Credenciales de prueba
 
@@ -51,13 +52,21 @@ Un alumno también puede **crear su cuenta** desde el login ("Crear cuenta"), co
 - Duración: al crear un parcial el profesor elige cuántos minutos dura (máximo 120). Los parciales anteriores quedan sin límite de tiempo.
 - Turnos: hay tres turnos fijos, definidos en `src/config.js`: mañana (07:45 a 11:45), tarde (13:30 a 17:30) y noche (18:30 a 22:30). Al crear o editar un parcial el profesor le asigna uno o más turnos, con la fecha y la hora de inicio. El fin es la hora de inicio más la duración. La hora de inicio se habilita recién cuando hay duración y turno, y no se acepta si el parcial terminaría después del fin del turno (ej. 120 min en el turno mañana tiene que empezar entre 07:45 y 09:45) ni si ya pasó. Un turno se puede cambiar o quitar solo antes de que empiece, y la duración queda fija cuando alguno ya empezó.
 - Alumnos y seguimiento: desde el detalle del parcial, en cada turno asignado el profesor busca alumnos por nombre, los asigna y ve quién **no abrió**, quién lo está rindiendo, quién **entregó** y, al terminar, quién **no completó**.
-- **Monitoreo** (pestaña del profesor): un panel por cada parcial que se está tomando ahora, actualizado cada 2 s. Arriba, el tiempo restante del turno y cuántos alumnos tienen **cambios pendientes** de sincronizar. Abajo, cada alumno con su estado (**en línea**, **desconectado**, **entregado**, **entregado por tiempo** si se envió solo al llegar a cero, **entregado por sistema** si lo entregó el servidor porque estaba desconectado, **no abrió**), una barra con el tiempo del turno que ya pasó y la hora del último dato recibido. Los desconectados aparecen primero.
+- **Monitoreo** (pestaña del profesor): un panel por cada parcial que se está tomando ahora (o que terminó pero tiene un Incidente pendiente), actualizado cada 2 s sin superponer pedidos. Arriba, el tiempo restante del turno, la cantidad de **incidentes** y de alumnos con **cambios pendientes** de sincronizar. Abajo, cada alumno con su **nombre**, **estado** (**En curso**, **Entregado**, **Salió y se entregó**, **Incidente**, o **No abrió**), la **última actividad** y las **acciones** (**Reanudar** solo en Incidente, y **Ver actividad**). Los incidentes aparecen primero. Al hacer click en un alumno se abre un panel lateral con inicio, entrega, tipo de salida, reanudaciones (quién y cuándo) y la línea de tiempo de eventos.
+- **Modo restringido** (Sprint 4):
+  - Antes de empezar, el alumno lee las reglas, las acepta y toca **Ingresar al examen**: el examen se muestra recién cuando el navegador confirma la pantalla completa. Si el navegador no la permite o la rechaza, se explica por qué.
+  - No hay salidas permitidas. El botón rojo **SALIR** (con confirmación) entrega el examen tal como está: queda como **Salió y se entregó** y no se puede retomar. La entrega normal (**Enviar parcial**) sigue igual y queda como **Entregado**.
+  - Salir de pantalla completa, cambiar de pestaña o de ventana, recargar, cerrar o navegar fuera del examen es un **Incidente**: el examen se oculta en el acto, se registra con las últimas respuestas y queda bloqueado. Las señales de una misma salida (fullscreenchange, visibilitychange, blur) cuentan como un solo incidente.
+  - **Latido** cada 2 s: si el servidor no lo recibe durante 8 s (corte de Wi-Fi, batería, navegador cerrado), la sesión pasa a Incidente. No hay procesos en segundo plano: el servidor lo revisa en cada consulta (el panel del profesor consulta cada 2 s), así se ve en ≤ 10 s. Sin conexión, los eventos quedan en una cola local y se mandan al volver la red.
+  - El profesor puede **reanudar** un Incidente (y solo un Incidente). El alumno ve el aviso sin recargar, toca **Volver al examen**, vuelve a pantalla completa y sigue con sus respuestas y el tiempo exacto que le quedaba al producirse el incidente.
+  - **Trazabilidad**: cada inicio, aceptación de reglas, pantalla completa, señal de salida, incidente, salida voluntaria, entrega, reanudación y reconexión queda en `eventos_seguridad` con la hora del servidor. La tabla es append-only: la base rechaza modificar o borrar eventos.
+  - Una web no puede impedir Escape, Alt+Tab ni cerrar el navegador: el sistema detecta, oculta, registra y bloquea.
 - La sección **Turnos** muestra los parciales publicados en las pestañas **Próximos**, **En curso** y **Finalizados**.
 - Vista del alumno: lista de los parciales de los turnos a los que fue asignado, con la fecha y el horario. Solo puede abrir el parcial dentro del horario del turno. El alumno abre un parcial, toca **Comenzar parcial**, lo responde y lo **envía una sola vez**. Después solo puede ver su entrega.
 - Examen seguro y persistente:
   - **Temporizador** en `HH:MM:SS` calculado con la hora del servidor y el fin del turno (inicio + duración). El tiempo corre desde que empieza el turno, igual para todos: quien abre el parcial más tarde tiene menos tiempo. Cambiar la hora del dispositivo no lo afecta. Avisos a los 10, 5 y 1 minuto.
   - **Autoguardado**: cada cambio (texto, código, multiple choice, GeoGebra) se guarda en la base a los 300 ms de la última interacción, con el indicador "Guardando…", "Guardado" o "Sin conexión (guardado en caché local)". Sin red, las respuestas quedan en el navegador y se suben solas al volver la conexión.
-  - **Reingreso**: al recargar, cerrar el navegador o entrar desde otro dispositivo, se retoma con las respuestas guardadas y el tiempo real que queda.
+  - **Reingreso**: las respuestas guardadas y el tiempo se recuperan del servidor; durante el examen, recargar o abrirlo en otro dispositivo cuenta como salida del modo restringido (Incidente) y el profesor decide si reanuda.
   - **Entrega automática**: en 00:00:00 se bloquea la edición y se envía lo respondido. Si el alumno está desconectado, el servidor entrega lo último guardado al pasar la hora límite (se ve como "Enviado por vencimiento").
   - Las fechas y horas de los turnos se interpretan en hora argentina (`ZONA_HORARIA` en `src/config.js`).
 - El profesor puede publicar un parcial desde la lista (pestaña Creados) o desde el detalle, siempre que tenga algún turno que todavía no empezó.
@@ -65,6 +74,14 @@ Un alumno también puede **crear su cuenta** desde el login ("Crear cuenta"), co
 - Entregas: en el detalle de cada parcial publicado y en la sección **Entregas** (pestañas Sin corregir / Corregidas) el profesor ve las respuestas del alumno, cuándo empezó, cuándo entregó y si se envió por tiempo, y la corrige con una nota (0 a 10) y una devolución.
 - El alumno tiene sus parciales separados en **A entregar** y **Entregados**; al abrir un parcial entregado ve la nota y la devolución del profesor.
 - La sesión es **por pestaña**: se puede tener al profesor en una pestaña y a un alumno en otra. Al abrir una pestaña nueva hay que volver a iniciar sesión.
+
+## Pruebas
+
+```bash
+npm test
+```
+
+Usan el runner de Node (`node:test`) y una base PostgreSQL en memoria ([PGlite](https://pglite.dev), dependencia de desarrollo): no hace falta una base real. Cubren la API del modo restringido (estados, permisos, idempotencia, latido, reanudación, trazabilidad), la detección en el navegador y la migración sobre datos existentes.
 
 ## Build / deploy
 

@@ -5,9 +5,13 @@ import { leerToken, crearToken, hashPassword, verifyPassword } from './auth.js'
 import { query, tx } from './db.js'
 import { HttpError, enviar, leerBody } from './http.js'
 import {
-  TOLERANCIA_MS, aClase, aDocumento, aEntrega, aSesion, aTurno, aUsuario, aperturasDe, crearEntrega, finalizarVencidas,
-  guardarTurnos, turnosParaCambiar,
+  TOLERANCIA_MS, aClase, aDocumento, aEntrega, aSesion, aTurno, aUsuario, aperturasDe, guardarTurnos, turnosParaCambiar,
 } from './datos.js'
+import {
+  claveCliente, entregar, fechaCliente, marcarIncidente, normalizarSesiones, reanudar, registrarEvento, reingresar,
+  salirVoluntariamente, senalesCliente,
+} from './sesiones.js'
+import { EVENTOS, SESION, UMBRAL_LATIDO_MS, esSenal } from '../src/estadoExamen.js'
 import { TEMAS } from '../src/config.js'
 import { validateClase } from '../src/clases.js'
 import { validateRegistro } from '../src/registro.js'
@@ -112,7 +116,7 @@ ruta('GET', '/api/datos', '*', async ({ sesion }) => {
   }
 
   if (sesion.rol === 'profesor') {
-    await tx((c) => finalizarVencidas(c, 's.turno_id in (select id from turnos where profesor = $1)', yo))
+    await tx((c) => normalizarSesiones(c, 's.turno_id in (select id from turnos where profesor = $1)', yo))
     const [usuarios, clases, documentos, turnos, entregas] = await Promise.all([
       query("select * from usuarios where rol in ('profesor', 'alumno')"),
       query('select * from clases where $1 = any(profesores)', [yo]),
@@ -131,7 +135,7 @@ ruta('GET', '/api/datos', '*', async ({ sesion }) => {
   }
 
   // Alumno: solo los parciales publicados de sus turnos, sin las respuestas correctas ni los otros alumnos.
-  await tx((c) => finalizarVencidas(c, 's.alumno = $1', yo))
+  await tx((c) => normalizarSesiones(c, 's.alumno = $1', yo))
   const [usuarios, clases, turnos, entregas] = await Promise.all([
     query("select * from usuarios where rol = 'profesor' or username = $1", [yo]),
     query('select * from clases where $1 = any(alumnos)', [yo]),
@@ -374,15 +378,23 @@ ruta('DELETE', '/api/turnos/:id/alumnos/:username', 'profesor', async ({ params,
 ruta('GET', '/api/turnos/:id/seguimiento', 'profesor', async ({ params, sesion }) => {
   const { rows: [turno] } = await query('select * from turnos where id = $1 and profesor = $2', [params.id, sesion.username])
   if (!turno) throw new HttpError(404, 'El turno no existe.')
+  await tx((c) => normalizarSesiones(c, 's.turno_id = $1', turno.id))
   return { alumnos: await filasSeguimiento(turno) }
 })
 
-// Monitoreo: los turnos del profesor que están en curso ahora, con el seguimiento de cada uno.
+// Monitoreo: los turnos del profesor que se están tomando ahora, con el seguimiento de cada uno. También los que ya
+// terminaron pero tienen un examen en Incidente o reanudado (el tiempo de esos alumnos sigue después del turno).
 ruta('GET', '/api/monitoreo', 'profesor', async ({ sesion }) => {
+  await tx((c) => normalizarSesiones(c, 's.turno_id in (select id from turnos where profesor = $1)', sesion.username))
   const ahora = new Date()
   const { rows } = await query(
     `select t.*, d.titulo from turnos t join documentos d on d.id = t.parcial_id
-     where t.profesor = $1 and t.inicio <= $2 and t.fin > $2 order by t.fin`,
+     where t.profesor = $1 and t.inicio <= $2 and (
+       t.fin > $2 or exists (
+         select 1 from sesiones_examen s where s.turno_id = t.id
+           and (s.estado = 'incidente' or (s.estado = 'en-curso' and (s.reingreso_pendiente or s.deadline > $2)))
+       )
+     ) order by t.fin`,
     [sesion.username, ahora]
   )
   return {
@@ -392,9 +404,9 @@ ruta('GET', '/api/monitoreo', 'profesor', async ({ sesion }) => {
   }
 })
 
-// Sesión y entrega de cada alumno asignado a un turno (fila de la base). Antes entrega las sesiones vencidas.
+// Sesión y entrega de cada alumno asignado a un turno (fila de la base). Quien llama normaliza antes las sesiones
+// (vencidas y sin latido), así nadie ve "en curso" una sesión que ya terminó o que dejó de responder.
 async function filasSeguimiento(turno) {
-  await tx((c) => finalizarVencidas(c, 's.turno_id = $1', turno.id))
   const [sesiones, entregas] = await Promise.all([
     query('select * from sesiones_examen where turno_id = $1', [turno.id]),
     query('select * from entregas where parcial_id = $1 and alumno = any($2)', [turno.parcial_id, turno.alumnos]),
@@ -406,11 +418,66 @@ async function filasSeguimiento(turno) {
     const e = entregaDe.get(username)
     return {
       username,
-      sesion: s ? { apertura: s.apertura, deadline: s.deadline, ultimoGuardado: s.ultimoGuardado, ultimoLatido: s.ultimoLatido, pendientes: s.pendientes, estado: s.estado } : null,
-      entrega: e ? { id: e.id, fechaInicio: e.fechaInicio, fechaEntrega: e.fechaEntrega, enviadoPorTiempo: e.enviadoPorTiempo, enviadoPorSistema: e.enviadoPorSistema } : null,
+      sesion: s ? {
+        apertura: s.apertura, deadline: s.deadline, ultimoGuardado: s.ultimoGuardado, ultimoLatido: s.ultimoLatido,
+        pendientes: s.pendientes, estado: s.estado, restanteMs: s.restanteMs, incidenteFecha: s.incidenteFecha,
+        incidenteCausa: s.incidenteCausa, reingresoPendiente: s.reingresoPendiente, reanudaciones: s.reanudaciones,
+        fechaFin: s.fechaFin,
+      } : null,
+      entrega: e ? {
+        id: e.id, fechaInicio: e.fechaInicio, fechaEntrega: e.fechaEntrega, enviadoPorTiempo: e.enviadoPorTiempo,
+        enviadoPorSistema: e.enviadoPorSistema, salidaVoluntaria: e.salidaVoluntaria,
+      } : null,
     }
   })
 }
+
+// Turno del profesor con un alumno asignado. Solo el profesor del turno ve o reanuda la sesión de sus alumnos.
+async function turnoPropioConAlumno(client, turnoId, profesor, alumno) {
+  const { rows: [turno] } = await client.query('select * from turnos where id = $1 and profesor = $2', [turnoId, profesor])
+  if (!turno) throw new HttpError(404, 'El turno no existe.')
+  if (!turno.alumnos.includes(alumno)) throw new HttpError(404, 'El alumno no está asignado a este turno.')
+  return turno
+}
+
+// Detalle de un alumno en el monitoreo: estado de su sesión, su entrega y la línea de tiempo de eventos.
+ruta('GET', '/api/turnos/:id/alumnos/:username/eventos', 'profesor', async ({ params, sesion }) => {
+  const turno = await turnoPropioConAlumno({ query }, params.id, sesion.username, params.username)
+  await tx((c) => normalizarSesiones(c, 's.turno_id = $1', turno.id))
+  const [fila] = await filasSeguimiento({ ...turno, alumnos: [params.username] })
+  const { rows } = await query(
+    `select e.*, u.nombre as actor_nombre from eventos_seguridad e
+     join sesiones_examen s on s.id = e.sesion_id
+     left join usuarios u on u.username = e.actor
+     where s.turno_id = $1 and s.alumno = $2
+     order by e.fecha_servidor, e.secuencia`,
+    [turno.id, params.username]
+  )
+  return {
+    ...fila,
+    eventos: rows.map((e) => ({
+      id: e.id,
+      tipo: e.tipo,
+      fechaServidor: e.fecha_servidor.toISOString(),
+      fechaCliente: e.fecha_cliente ? e.fecha_cliente.toISOString() : null,
+      actor: e.actor,
+      actorNombre: e.actor === 'sistema' ? 'Sistema' : e.actor_nombre ?? e.actor,
+      metadata: e.metadata,
+    })),
+  }
+})
+
+// Reanudar un examen en Incidente. Solo el profesor del turno y solo desde Incidente (ver sesiones.js).
+ruta('POST', '/api/turnos/:id/alumnos/:username/reanudar', 'profesor', async ({ params, body, sesion }) =>
+  tx(async (c) => {
+    const turno = await turnoPropioConAlumno(c, params.id, sesion.username, params.username)
+    await normalizarSesiones(c, 's.turno_id = $1', turno.id)
+    const { rows: [s] } = await c.query('select * from sesiones_examen where turno_id = $1 and alumno = $2 for update', [turno.id, params.username])
+    if (!s) throw new HttpError(404, 'El alumno no empezó este parcial.')
+    const nueva = await reanudar(c, s, { profesor: sesion, ahora: new Date(), clave: claveCliente(body.eventoId) })
+    return { estado: nueva.estado, reingresoPendiente: nueva.reingreso_pendiente }
+  })
+)
 
 // --- Entregas (profesor)
 
@@ -433,6 +500,9 @@ ruta('PUT', '/api/entregas/:id/correccion', 'profesor', async ({ params, body, s
 // La sesión guarda la hora límite: el fin del turno (inicio + duración), igual para todos los alumnos. El tiempo
 // corre desde que empieza el turno, no desde que cada uno abre el parcial: quien abre tarde tiene menos tiempo.
 // Toda la hora es la del servidor.
+//
+// Modo restringido: el alumno acepta las reglas y entra en pantalla completa antes de empezar. El estado de la
+// sesión lo cambia solo el servidor (sesiones.js); la sesión y el alumno salen siempre del token, nunca del body.
 
 async function turnoDelAlumno(client, parcialId, alumno) {
   const { rows } = await client.query(
@@ -457,9 +527,23 @@ async function sesionDelAlumno(client, parcialId, alumno, { bloquear = false } =
   return rows[0] ?? null
 }
 
+// Sesión del alumno bloqueada para una transición, después de normalizar las suyas.
+async function sesionParaCambiar(client, parcialId, alumno) {
+  await normalizarSesiones(client, 's.alumno = $1', alumno)
+  const s = await sesionDelAlumno(client, parcialId, alumno, { bloquear: true })
+  if (!s) throw new HttpError(404, 'No empezaste este parcial.')
+  return s
+}
+
+// Estado liviano de la sesión (sin respuestas), para consultarlo seguido.
+const estadoSesion = (s) => ({
+  estado: s.estado, reingresoPendiente: Boolean(s.reingreso_pendiente), reanudaciones: s.reanudaciones ?? 0,
+  restanteMs: s.restante_ms == null ? null : Number(s.restante_ms), deadline: s.deadline.toISOString(), seq: Number(s.seq),
+})
+
 ruta('GET', '/api/examen/:parcialId', 'alumno', async ({ params, sesion }) => {
   const yo = sesion.username
-  await tx((c) => finalizarVencidas(c, 's.alumno = $1', yo))
+  await tx((c) => normalizarSesiones(c, 's.alumno = $1', yo))
   const entrega = await entregaDelAlumno({ query }, params.parcialId, yo)
   const turno = await turnoDelAlumno({ query }, params.parcialId, yo).catch((e) => {
     if (entrega) return null
@@ -475,83 +559,169 @@ ruta('GET', '/api/examen/:parcialId', 'alumno', async ({ params, sesion }) => {
   }
 })
 
-ruta('POST', '/api/examen/:parcialId/comenzar', 'alumno', async ({ params, sesion }) =>
+// Mientras el alumno espera en la pantalla de Incidente, consulta cada 2 s si el profesor lo reanudó.
+ruta('GET', '/api/examen/:parcialId/estado', 'alumno', async ({ params, sesion }) => {
+  await tx((c) => normalizarSesiones(c, 's.alumno = $1', sesion.username))
+  const s = await sesionDelAlumno({ query }, params.parcialId, sesion.username)
+  if (!s) throw new HttpError(404, 'No empezaste este parcial.')
+  return estadoSesion(s)
+})
+
+// Empieza el examen. Solo después de aceptar las reglas del modo restringido y de entrar en pantalla completa
+// (el navegador lo confirma antes de llamar acá). Idempotente: si ya había empezado, devuelve la sesión.
+ruta('POST', '/api/examen/:parcialId/comenzar', 'alumno', async ({ params, body, sesion }) =>
   tx(async (c) => {
     const yo = sesion.username
     const turno = await turnoDelAlumno(c, params.parcialId, yo)
     const existente = await sesionDelAlumno(c, params.parcialId, yo)
     if (existente) return { sesion: aSesion(existente) }
     if (await entregaDelAlumno(c, params.parcialId, yo)) throw new HttpError(409, 'Este parcial ya fue entregado.', { codigo: 'entregado' })
-    const ahora = Date.now()
-    if (estadoTurno(aTurno(turno), ahora) !== 'en-curso') {
+    if (body.aceptoReglas !== true) {
+      throw new HttpError(400, 'Para empezar tenés que aceptar las reglas del modo restringido.', { codigo: 'reglas' })
+    }
+    if (body.pantallaCompleta !== true) {
+      throw new HttpError(400, 'El examen solo se puede hacer en pantalla completa.', { codigo: 'pantalla-completa' })
+    }
+    const ahora = new Date()
+    if (estadoTurno(aTurno(turno), ahora.getTime()) !== 'en-curso') {
       throw new HttpError(409, 'El turno no está en curso: no se puede abrir el parcial.', { codigo: 'fuera-de-turno' })
     }
-    const deadline = turnoFin(aTurno(turno)).getTime()
+    const deadline = turnoFin(aTurno(turno))
     const { rows } = await c.query(
-      `insert into sesiones_examen (turno_id, alumno, parcial_id, apertura, deadline, ultimo_latido)
-       values ($1, $2, $3, $4, $5, $4) on conflict do nothing returning *`,
-      [turno.id, yo, params.parcialId, new Date(ahora), new Date(deadline)]
+      `insert into sesiones_examen (turno_id, alumno, parcial_id, apertura, deadline, ultimo_latido, reglas_aceptadas)
+       values ($1, $2, $3, $4, $5, $4, $4) on conflict do nothing returning *`,
+      [turno.id, yo, params.parcialId, ahora, deadline]
     )
-    return { sesion: aSesion(rows[0] ?? (await sesionDelAlumno(c, params.parcialId, yo))) }
+    if (!rows[0]) return { sesion: aSesion(await sesionDelAlumno(c, params.parcialId, yo)) }
+    const s = rows[0]
+    const fc = fechaCliente(body.fechaCliente)
+    await registrarEvento(c, s, 'EXAM_STARTED', { actor: yo, ahora, clave: 'inicio', fechaCliente: fc })
+    await registrarEvento(c, s, 'RESTRICTED_MODE_ACCEPTED', { actor: yo, ahora, clave: 'reglas', fechaCliente: fc })
+    await registrarEvento(c, s, 'FULLSCREEN_ENTERED', { actor: yo, ahora, clave: 'pantalla-completa', fechaCliente: fc })
+    return { sesion: aSesion(s) }
   })
 )
 
-// Se descartan los guardados que llegan fuera de orden (seq menor o igual al guardado) y los que llegan
-// después de la hora límite más la tolerancia.
+// Autoguardado. Se descartan los guardados que llegan fuera de orden (seq menor o igual al guardado), los que
+// llegan después de la hora límite más la tolerancia y los de una sesión que no está en curso (entregada o en
+// Incidente) o que espera volver a pantalla completa. Si la sesión dejó de latir, primero se normaliza: un
+// guardado no revive una sesión que ya perdió la señal.
 ruta('PUT', '/api/examen/:parcialId/respuestas', 'alumno', async ({ params, body, sesion }) => {
   const yo = sesion.username
   if (!esObjeto(body.respuestas) || !Number.isSafeInteger(body.seq) || body.seq < 1) {
     throw new HttpError(400, 'Las respuestas no son válidas.')
   }
-  const ahora = new Date()
-  const { rows } = await query(
-    `update sesiones_examen set respuestas = $3, seq = $4, ultimo_guardado = $5, ultimo_latido = $5, pendientes = false
-     where parcial_id = $1 and alumno = $2 and estado = 'en-curso' and seq < $4 and deadline >= $6
-     returning seq`,
-    [params.parcialId, yo, JSON.stringify(body.respuestas), body.seq, ahora, new Date(ahora.getTime() - TOLERANCIA_MS)]
-  )
-  if (rows[0]) return { seq: Number(rows[0].seq) }
+  const guardar = async (conUmbral) => {
+    const ahora = new Date()
+    const { rows } = await query(
+      `update sesiones_examen set respuestas = $3, seq = $4, ultimo_guardado = $5, ultimo_latido = $5, pendientes = false
+       where parcial_id = $1 and alumno = $2 and estado = 'en-curso' and not reingreso_pendiente and seq < $4
+         and deadline >= $6 and ($7::timestamptz is null or ultimo_latido >= $7)
+       returning seq`,
+      [params.parcialId, yo, JSON.stringify(body.respuestas), body.seq, ahora, new Date(ahora.getTime() - TOLERANCIA_MS),
+        conUmbral ? new Date(ahora.getTime() - UMBRAL_LATIDO_MS) : null]
+    )
+    return rows[0]
+  }
+  let guardado = await guardar(true)
+  if (!guardado) {
+    await tx((c) => normalizarSesiones(c, 's.alumno = $1', yo))
+    guardado = await guardar(false)
+  }
+  if (guardado) return { seq: Number(guardado.seq) }
   const s = await sesionDelAlumno({ query }, params.parcialId, yo)
   if (!s) throw new HttpError(404, 'No empezaste este parcial.')
-  if (s.estado !== 'en-curso') throw new HttpError(409, 'El parcial ya fue entregado.', { codigo: 'entregado' })
-  if (s.deadline.getTime() < ahora.getTime() - TOLERANCIA_MS) throw new HttpError(409, 'Se terminó el tiempo.', { codigo: 'vencido' })
+  if (s.estado === SESION.INCIDENTE) throw new HttpError(409, 'El examen fue bloqueado por un incidente.', { codigo: 'incidente' })
+  if (s.estado !== SESION.EN_CURSO) throw new HttpError(409, 'El parcial ya fue entregado.', { codigo: 'entregado' })
+  if (s.reingreso_pendiente) throw new HttpError(409, 'Volvé a pantalla completa para continuar.', { codigo: 'reingreso' })
+  if (s.deadline.getTime() < Date.now() - TOLERANCIA_MS) throw new HttpError(409, 'Se terminó el tiempo.', { codigo: 'vencido' })
   return { seq: Number(s.seq) }
 })
 
+// Latido (cada 2 s mientras el examen está en curso). La hora del último latido es la del servidor. Si la sesión
+// ya había pasado el umbral sin latir, el latido no la revive: se normaliza y queda en Incidente.
 ruta('POST', '/api/examen/:parcialId/latido', 'alumno', async ({ params, body, sesion }) => {
-  const { rows } = await query(
-    `update sesiones_examen set ultimo_latido = now(), pendientes = $3
-     where parcial_id = $1 and alumno = $2 and estado = 'en-curso' returning *`,
-    [params.parcialId, sesion.username, Boolean(body.pendientes)]
-  )
-  const s = rows[0] ?? (await sesionDelAlumno({ query }, params.parcialId, sesion.username))
+  const yo = sesion.username
+  const latir = async (conUmbral) => {
+    const ahora = new Date()
+    const { rows } = await query(
+      `update sesiones_examen set ultimo_latido = $3, pendientes = $4
+       where parcial_id = $1 and alumno = $2 and estado = 'en-curso' and not reingreso_pendiente
+         and ($5::timestamptz is null or ultimo_latido >= $5)
+       returning *`,
+      [params.parcialId, yo, ahora, Boolean(body.pendientes), conUmbral ? new Date(ahora.getTime() - UMBRAL_LATIDO_MS) : null]
+    )
+    return rows[0]
+  }
+  let s = await latir(true)
+  if (!s) {
+    await tx((c) => normalizarSesiones(c, 's.alumno = $1', yo))
+    s = (await latir(false)) ?? (await sesionDelAlumno({ query }, params.parcialId, yo))
+  }
   if (!s) throw new HttpError(404, 'No empezaste este parcial.')
-  return { estado: s.estado, seq: Number(s.seq), deadline: s.deadline.toISOString() }
+  return estadoSesion(s)
 })
 
+// Incidente detectado por el navegador (salida de pantalla completa, cambio de pestaña, etc.). Idempotente: si la
+// sesión ya estaba en Incidente (o se entregó, por ejemplo con SALIR, que gana si llegó antes), no cambia nada ni
+// crea otro incidente. Con `diferido` (el evento quedó en la cola local sin conexión y se manda al volver la red)
+// se anota además la reconexión.
+ruta('POST', '/api/examen/:parcialId/incidente', 'alumno', async ({ params, body, sesion }) => {
+  const causa = body.causa
+  if (!esSenal(causa) || causa === 'HEARTBEAT_TIMEOUT') throw new HttpError(400, 'La causa del incidente no es válida.')
+  const clave = claveCliente(body.eventoId)
+  if (!clave) throw new HttpError(400, 'Falta el identificador del evento.')
+  return tx(async (c) => {
+    const yo = sesion.username
+    const s = await sesionParaCambiar(c, params.parcialId, yo)
+    const ahora = new Date()
+    const fc = fechaCliente(body.fechaCliente)
+    let actual = s
+    if (s.estado === SESION.EN_CURSO && !s.reingreso_pendiente) {
+      actual = await marcarIncidente(c, s, {
+        causa, senales: senalesCliente(body.senales), ahora, actor: yo, clave, fechaCliente: fc, body,
+        metadata: body.diferido ? { diferido: true } : {},
+      })
+    }
+    if (body.diferido) {
+      await registrarEvento(c, actual, 'RECONNECTED', {
+        actor: yo, ahora, fechaCliente: fc, clave: `reconexion:${clave}`, metadata: { eventoPendiente: causa, descripcion: EVENTOS[causa] },
+      })
+    }
+    return estadoSesion(actual)
+  })
+})
+
+// Salida voluntaria (botón SALIR confirmado): se entrega con lo último guardado (y lo que llega en este pedido) y no
+// se puede reanudar. El cliente marca la salida en curso antes de llamar acá y sale de pantalla completa recién
+// cuando el servidor confirma, así esa salida no se toma como Incidente.
+ruta('POST', '/api/examen/:parcialId/salir', 'alumno', async ({ params, body, sesion }) =>
+  tx(async (c) => {
+    const yo = sesion.username
+    const s = await sesionParaCambiar(c, params.parcialId, yo)
+    await salirVoluntariamente(c, s, {
+      body, ahora: new Date(), actor: yo, clave: claveCliente(body.eventoId), fechaCliente: fechaCliente(body.fechaCliente),
+    })
+    return { entrega: await entregaDelAlumno(c, params.parcialId, yo), ...estadoSesion(await sesionDelAlumno(c, params.parcialId, yo)) }
+  })
+)
+
+// Vuelta a pantalla completa después de que el profesor reanudó el examen: el tiempo sigue desde el que quedaba.
+ruta('POST', '/api/examen/:parcialId/reingresar', 'alumno', async ({ params, body, sesion }) =>
+  tx(async (c) => {
+    const s = await sesionParaCambiar(c, params.parcialId, sesion.username)
+    const nueva = await reingresar(c, s, { ahora: new Date(), actor: sesion.username, fechaCliente: fechaCliente(body.fechaCliente) })
+    return { sesion: aSesion(nueva) }
+  })
+)
+
 // Entrega del alumno (manual o automática al llegar a cero). Si llega tarde, se entrega lo último guardado.
-// Es idempotente: si ya estaba entregado, devuelve esa entrega.
+// Es idempotente: si ya estaba entregado, devuelve esa entrega. Una sesión en Incidente no se puede entregar.
 ruta('POST', '/api/examen/:parcialId/entregar', 'alumno', async ({ params, body, sesion }) =>
   tx(async (c) => {
     const yo = sesion.username
-    const s = await sesionDelAlumno(c, params.parcialId, yo, { bloquear: true })
-    if (!s) throw new HttpError(404, 'No empezaste este parcial.')
-    if (s.estado === 'en-curso') {
-      const ahora = Date.now()
-      const enTiempo = ahora <= s.deadline.getTime() + TOLERANCIA_MS
-      const nuevas = enTiempo && esObjeto(body.respuestas) && Number.isSafeInteger(body.seq) && body.seq >= Number(s.seq)
-      const respuestas = nuevas ? body.respuestas : s.respuestas
-      await crearEntrega(c, s, {
-        respuestas,
-        porTiempo: enTiempo && Boolean(body.automatico),
-        porSistema: !enTiempo,
-        fechaEntrega: new Date(Math.min(ahora, s.deadline.getTime())),
-      })
-      await c.query(
-        'update sesiones_examen set estado = $3, respuestas = $4, seq = greatest(seq, $5) where parcial_id = $1 and alumno = $2',
-        [params.parcialId, yo, enTiempo ? 'entregado' : 'entregado-sistema', JSON.stringify(respuestas), nuevas ? body.seq : 0]
-      )
-    }
+    const s = await sesionParaCambiar(c, params.parcialId, yo)
+    await entregar(c, s, { body, ahora: new Date(), actor: yo })
     return { entrega: await entregaDelAlumno(c, params.parcialId, yo) }
   })
 )

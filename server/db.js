@@ -6,7 +6,8 @@ import pg from 'pg'
 pg.types.setTypeParser(1082, (valor) => valor)
 
 // fable: pool chico por instancia de función; con mucho tráfico usar la URL "pooled" de Neon.
-export const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 })
+// DATABASE_POOL_MAX solo se usa en pruebas (PGlite admite una conexión a la vez).
+export const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: Number(process.env.DATABASE_POOL_MAX) || 3 })
 
 export function query(text, params) {
   return pool.query(text, params)

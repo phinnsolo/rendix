@@ -79,6 +79,7 @@ export function aEntrega(r, { paraAlumno = false } = {}) {
     fechaEntrega: iso(r.fecha_entrega),
     enviadoPorTiempo: r.enviado_por_tiempo,
     enviadoPorSistema: r.enviado_por_sistema,
+    salidaVoluntaria: Boolean(r.salida_voluntaria),
     correccion: r.correccion,
   }
 }
@@ -95,6 +96,15 @@ export function aSesion(r) {
     ultimoLatido: iso(r.ultimo_latido),
     pendientes: r.pendientes,
     estado: r.estado,
+    // Modo restringido
+    id: r.id,
+    reglasAceptadas: iso(r.reglas_aceptadas),
+    restanteMs: r.restante_ms == null ? null : Number(r.restante_ms),
+    incidenteFecha: iso(r.incidente_fecha),
+    incidenteCausa: r.incidente_causa ?? null,
+    reingresoPendiente: Boolean(r.reingreso_pendiente),
+    reanudaciones: r.reanudaciones ?? 0,
+    fechaFin: iso(r.fecha_fin),
   }
 }
 
@@ -149,33 +159,14 @@ export async function aperturasDe(client, turnoIds, alumno = null) {
 // --- Entregas
 
 // Crea la entrega de una sesión con una copia del parcial. Si ya existía, no hace nada.
-export async function crearEntrega(client, sesion, { respuestas, porTiempo, porSistema, fechaEntrega }) {
+export async function crearEntrega(client, sesion, { respuestas, porTiempo, porSistema, fechaEntrega, salidaVoluntaria = false }) {
   await client.query(
     `insert into entregas (id, parcial_id, profesor, alumno, alumno_nombre, titulo, tema, herramientas, duracion, bloques,
-                           respuestas, fecha_inicio, fecha_entrega, enviado_por_tiempo, enviado_por_sistema)
-     select $1, d.id, d.profesor, u.username, u.nombre, d.titulo, d.tema, d.herramientas, d.duracion, d.bloques, $2, $3, $4, $5, $6
+                           respuestas, fecha_inicio, fecha_entrega, enviado_por_tiempo, enviado_por_sistema,
+                           salida_voluntaria)
+     select $1, d.id, d.profesor, u.username, u.nombre, d.titulo, d.tema, d.herramientas, d.duracion, d.bloques, $2, $3, $4, $5, $6, $9
      from documentos d, usuarios u where d.id = $7 and u.username = $8
      on conflict (parcial_id, alumno) do nothing`,
-    [crypto.randomUUID(), JSON.stringify(respuestas), sesion.apertura, fechaEntrega, porTiempo, porSistema, sesion.parcial_id, sesion.alumno]
+    [crypto.randomUUID(), JSON.stringify(respuestas), sesion.apertura, fechaEntrega, porTiempo, porSistema, sesion.parcial_id, sesion.alumno, salidaVoluntaria]
   )
-}
-
-// Entrega automática del servidor: las sesiones que pasaron la hora límite (más la tolerancia) sin entregarse
-// se entregan con lo último guardado, con la hora límite como fecha de entrega. `filtro` es una condición SQL
-// sobre `s` (sesiones_examen) con el parámetro $1.
-// Se llama antes de leer sesiones o entregas, así nadie ve una sesión vencida como "en curso".
-export async function finalizarVencidas(client, filtro, valor) {
-  const { rows } = await client.query(
-    `select s.* from sesiones_examen s
-     where s.estado = 'en-curso' and s.deadline < $2 and ${filtro}
-     for update skip locked`,
-    [valor, new Date(Date.now() - TOLERANCIA_MS)]
-  )
-  for (const s of rows) {
-    await crearEntrega(client, s, { respuestas: s.respuestas, porTiempo: false, porSistema: true, fechaEntrega: s.deadline })
-    await client.query(
-      "update sesiones_examen set estado = 'entregado-sistema' where turno_id = $1 and alumno = $2",
-      [s.turno_id, s.alumno]
-    )
-  }
 }

@@ -22,8 +22,9 @@ const GUARDADO = {
 
 // Barra superior del examen: tema, duración y herramientas habilitadas.
 // El tiempo restante solo aparece cuando llega `segundosRestantes` (el alumno está resolviendo), y el estado del
-// autoguardado cuando llega `estadoGuardado` ('guardando' | 'guardado' | 'sin-conexion').
-export default function ExamHeader({ tema, herramientas, duracion = null, segundosRestantes = null, estadoGuardado = null, sticky = false }) {
+// autoguardado cuando llega `estadoGuardado` ('guardando' | 'guardado' | 'sin-conexion'). Con `onSalir` (modo
+// restringido) muestra el botón rojo SALIR, siempre visible porque la barra es fija.
+export default function ExamHeader({ tema, herramientas, duracion = null, segundosRestantes = null, estadoGuardado = null, sticky = false, onSalir = null, salirDeshabilitado = false }) {
   const habilitadas = Object.entries(HERRAMIENTAS).filter(([key]) => herramientas[key])
   const resolviendo = segundosRestantes !== null
 
@@ -38,6 +39,11 @@ export default function ExamHeader({ tema, herramientas, duracion = null, segund
         )}
         {estadoGuardado && (
           <span className={`save-status ${estadoGuardado}`} role="status">{GUARDADO[estadoGuardado]}</span>
+        )}
+        {onSalir && (
+          <button type="button" className="exam-exit" onClick={onSalir} disabled={salirDeshabilitado}>
+            Salir
+          </button>
         )}
       </div>
       <div className="exam-tools">

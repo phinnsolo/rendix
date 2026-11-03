@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getAlumnos, nombreDe } from '../auth.js'
 import { getClase } from '../clasesStore.js'
@@ -7,7 +7,9 @@ import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
 import { asignarAlumnos, estadoTurno, formatHorario, getSeguimiento, getTurno, quitarAlumno } from '../turnosStore.js'
 import { now } from '../clock.js'
-import { ESTADO_ALUMNO, SEGUIMIENTO_MS, estadoAlumno } from '../seguimiento.js'
+import { SEGUIMIENTO_MS, detalleEstado, estadoAlumno } from '../seguimiento.js'
+import { usePolling } from '../usePolling.js'
+import AlumnoActividad, { BotonReanudar, EstadoChip } from '../components/AlumnoActividad.jsx'
 import NotFound from '../components/NotFound.jsx'
 import BackLink from '../components/BackLink.jsx'
 
@@ -25,20 +27,16 @@ export default function TurnoDetailPage() {
   const [seguimiento, setSeguimiento] = useState(null)
   const [sinConexion, setSinConexion] = useState(false)
   const [ahora, setAhora] = useState(now)
-  const refresh = useCallback(() => {
-    getSeguimiento(turnoId).then(
-      (datos) => {
-        setSeguimiento(new Map(datos.alumnos.map((a) => [a.username, a])))
-        setSinConexion(false)
-      },
-      () => setSinConexion(true)
-    )
-  }, [turnoId])
-  useEffect(() => {
-    refresh()
-    const timer = setInterval(refresh, SEGUIMIENTO_MS)
-    return () => clearInterval(timer)
-  }, [refresh])
+  const [detalle, setDetalle] = useState(null) // username con el panel de actividad abierto
+  const refresh = usePolling(async () => {
+    try {
+      const datos = await getSeguimiento(turnoId)
+      setSeguimiento(new Map(datos.alumnos.map((a) => [a.username, a])))
+      setSinConexion(false)
+    } catch {
+      setSinConexion(true)
+    }
+  }, SEGUIMIENTO_MS, { clave: turnoId })
   useEffect(() => {
     const timer = setInterval(() => setAhora(now()), 1000)
     return () => clearInterval(timer)
@@ -63,7 +61,8 @@ export default function TurnoDetailPage() {
         entrega,
         sesion,
         apertura: sesion?.apertura ?? entrega?.fechaInicio ?? null,
-        estado: estadoAlumno(vivo, estado, ahora),
+        estado: estadoAlumno(vivo, estado),
+        detalle: detalleEstado(vivo, ahora),
       }
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true }))
@@ -133,10 +132,17 @@ export default function TurnoDetailPage() {
                       {fila.nombre}
                       <span className="muted small table-sub">{fila.username}</span>
                     </td>
-                    <td><span className={ESTADO_ALUMNO[fila.estado].className}>{ESTADO_ALUMNO[fila.estado].label}</span></td>
+                    <td>
+                      <EstadoChip estado={fila.estado} />
+                      {fila.detalle && <span className="muted small table-sub">{fila.detalle}</span>}
+                    </td>
                     <td>{fila.apertura ? formatDate(fila.apertura) : '—'}</td>
                     <td>{fila.entrega ? formatDate(fila.entrega.fechaEntrega) : '—'}</td>
                     <td className="table-actions">
+                      {fila.estado === 'incidente' && <BotonReanudar turnoId={turno.id} username={fila.username} onReanudado={refresh} />}
+                      {fila.sesion && (
+                        <button type="button" className="secondary" onClick={() => setDetalle(fila.username)}>Ver actividad</button>
+                      )}
                       {fila.entrega && (
                         <Link to={`/documentos/${turno.parcialId}/entregas/${fila.entrega.id}`} className="button secondary">
                           Ver entrega
@@ -155,6 +161,9 @@ export default function TurnoDetailPage() {
           </div>
         )}
       </section>
+      {detalle && (
+        <AlumnoActividad key={detalle} turnoId={turno.id} username={detalle} onCerrar={() => setDetalle(null)} onCambio={refresh} />
+      )}
     </>
   )
 }

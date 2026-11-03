@@ -3,15 +3,18 @@
 // Cada cambio se escribe enseguida en una copia local (localStorage, síncrona: sobrevive a un cierre o un corte
 // de luz) y, 300 ms después de la última interacción, se manda al servidor. Cada cambio sube `seq`; el servidor
 // descarta lo que llega fuera de orden. Sin conexión se reintenta cada segundo y apenas vuelve la red.
-// El latido (cada 5 s) le avisa al profesor que el alumno sigue conectado y si tiene cambios sin subir.
+// El latido (cada 2 s) le avisa al profesor que el alumno sigue conectado y si tiene cambios sin subir. Si el
+// servidor deja de recibirlo, marca la sesión como Incidente (modo restringido); si el navegador no recibe
+// respuesta durante UMBRAL_SIN_SENAL_MS, avisa con onSinSenal para bloquear el examen también de este lado.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { request } from './api.js'
 import { now } from './clock.js'
+import { LATIDO_MS } from './estadoExamen.js'
 
 const ESPERA_GUARDADO_MS = 300
 const REINTENTO_MS = 1000
-const LATIDO_MS = 5000
+export const UMBRAL_SIN_SENAL_MS = 10_000
 const KEEPALIVE_MAX = 60_000 // fetch keepalive no acepta cuerpos de más de 64 KB
 
 function cacheKey(alumno, parcialId) {
@@ -54,8 +57,8 @@ export function respuestasIniciales(alumno, parcialId, sesion) {
 }
 
 // `estado`: 'guardado' | 'guardando' | 'sin-conexion'. `onCerrado` se llama si el servidor avisa que la sesión
-// ya no está en curso (se entregó o venció).
-export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, onCerrado }) {
+// ya no está en curso (se entregó, venció o quedó en Incidente).
+export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, onCerrado, onSinSenal }) {
   const [respuestas, setRespuestas] = useState(inicial.respuestas)
   const respRef = useRef(inicial.respuestas)
   const seqRef = useRef(inicial.seq)
@@ -68,6 +71,8 @@ export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, 
   bloqueadoRef.current = bloqueado
   const onCerradoRef = useRef(onCerrado)
   onCerradoRef.current = onCerrado
+  const onSinSenalRef = useRef(onSinSenal)
+  onSinSenalRef.current = onSinSenal
 
   const programar = useCallback((ms) => {
     clearTimeout(timer.current)
@@ -91,7 +96,7 @@ export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, 
         borrarCache(alumno, parcialId)
       }
     } catch (e) {
-      if (e.codigo === 'entregado' || e.codigo === 'vencido') {
+      if (['entregado', 'vencido', 'incidente', 'reingreso'].includes(e.codigo)) {
         onCerradoRef.current()
       } else {
         setConectado(!e.sinConexion)
@@ -138,17 +143,26 @@ export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, 
     }
   }, [])
 
-  // Latido: también re-sincroniza la hora con el servidor.
+  // Latido: también re-sincroniza la hora con el servidor. Un solo pedido a la vez: si uno tarda, no se acumulan.
   useEffect(() => {
     if (bloqueado) return
+    let enVueloLatido = false
+    let ultimaRespuesta = performance.now()
     async function latir() {
+      if (performance.now() - ultimaRespuesta > UMBRAL_SIN_SENAL_MS) onSinSenalRef.current?.()
+      if (enVueloLatido) return
+      enVueloLatido = true
       try {
-        const { estado } = await request('POST', `/api/examen/${parcialId}/latido`, { pendientes: seqRef.current > subidoRef.current })
+        const { estado, reingresoPendiente } = await request('POST', `/api/examen/${parcialId}/latido`, { pendientes: seqRef.current > subidoRef.current })
+        ultimaRespuesta = performance.now()
         setConectado(true)
-        if (estado !== 'en-curso') onCerradoRef.current()
+        if (estado !== 'en-curso' || reingresoPendiente) onCerradoRef.current()
         else flushRef.current()
       } catch (e) {
         if (e.sinConexion) setConectado(false)
+        else ultimaRespuesta = performance.now()
+      } finally {
+        enVueloLatido = false
       }
     }
     latir()
