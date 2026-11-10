@@ -220,12 +220,13 @@ export function aplicarCambioAlumnos(turnos, parcialId, agregados, quitados, aho
 
 // Agrega alumnos sin repetir. Si un alumno está en otro turno del mismo parcial que todavía no empezó,
 // se lo mueve a este. Devuelve también los que no se pudieron asignar porque ya rinden ese examen en otro
-// turno que empezó.
+// turno que empezó, y los que se movieron con el turno del que salieron (para avisarlo, US4).
 export function aplicarAsignacion(turnos, id, usernames, ahora = now()) {
   const turno = turnos.find((t) => t.id === id)
   if (!turno) throw new Error('El turno no existe.')
   if (estadoTurno(turno, ahora) === 'finalizado') throw new Error('El turno ya terminó.')
   const rechazados = []
+  const movidos = []
   const alumnos = [...turno.alumnos]
   let resultado = turnos
   for (const username of usernames) {
@@ -237,10 +238,11 @@ export function aplicarAsignacion(turnos, id, usernames, ahora = now()) {
     }
     if (otro) {
       resultado = resultado.map((t) => (t.id === otro.id ? { ...t, alumnos: t.alumnos.filter((a) => a !== username) } : t))
+      movidos.push({ username, desde: formatHorario(otro) })
     }
     alumnos.push(username)
   }
-  return { turnos: resultado.map((t) => (t.id === id ? { ...t, alumnos } : t)), rechazados }
+  return { turnos: resultado.map((t) => (t.id === id ? { ...t, alumnos } : t)), rechazados, movidos }
 }
 
 export function aplicarQuitarAlumno(turnos, id, username, ahora = now()) {

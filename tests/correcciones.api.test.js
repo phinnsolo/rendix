@@ -212,3 +212,34 @@ describe('BUG-002 / BUG-003: la API no programa parciales fuera del día y turno
     assert.equal(ok.status, 200, JSON.stringify(ok.body))
   })
 })
+
+describe('BUG-014: pasar a un alumno a otro turno del mismo parcial avisa del cambio', () => {
+  test('la respuesta dice de qué turno salió y el alumno queda en un solo turno', async () => {
+    const d = new Date(Date.now() + 7 * 86_400_000)
+    while (d.getUTCDay() !== 1) d.setUTCDate(d.getUTCDate() + 1)
+    const fecha = d.toISOString().slice(0, 10)
+    const id = `mover-${Date.now()}`
+    await e.pool.query(
+      `insert into documentos (id, profesor, clase_id, titulo, tema, duracion, bloques) values ($1, 'profesor1', 'clase1', 'Mover', 'Tema 1', 60, '[]')`,
+      [id]
+    )
+    const turno = (sufijo, desde, hasta, alumnos) =>
+      e.pool.query(
+        `insert into turnos (id, profesor, parcial_id, turno, fecha, hora_inicio, hora_fin, inicio, fin, alumnos)
+         values ($1, 'profesor1', $2, 'manana', $3, $4, $5, $6, $7, $8)`,
+        [`${id}-${sufijo}`, id, fecha, desde, hasta, `${fecha}T${desde}:00-03:00`, `${fecha}T${hasta}:00-03:00`, alumnos]
+      )
+    await turno('a', '08:00', '09:00', ['alumno1'])
+    await turno('b', '10:00', '11:00', [])
+
+    const { status, body } = await e.api('POST', `/api/turnos/${id}-b/alumnos`, { token: e.tokens.profesor1, body: { usernames: ['alumno1'] } })
+    assert.equal(status, 200, JSON.stringify(body))
+    assert.deepEqual(body.rechazados, [])
+    assert.equal(body.movidos.length, 1)
+    assert.equal(body.movidos[0].username, 'alumno1')
+    assert.match(body.movidos[0].desde, /Turno mañana .* 08:00 a 09:00/)
+
+    const { rows } = await e.pool.query('select id from turnos where parcial_id = $1 and $2 = any(alumnos)', [id, 'alumno1'])
+    assert.deepEqual(rows.map((r) => r.id), [`${id}-b`])
+  })
+})

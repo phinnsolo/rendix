@@ -5,7 +5,7 @@ import { getClase } from '../clasesStore.js'
 import { getDocument, isPublished } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
-import { asignarAlumnos, estadoTurno, formatHorario, getSeguimiento, getTurno, quitarAlumno } from '../turnosStore.js'
+import { asignarAlumnos, estadoTurno, formatHorario, getSeguimiento, getTurno, getTurnosFor, nombreTurno, quitarAlumno } from '../turnosStore.js'
 import { now } from '../clock.js'
 import { SEGUIMIENTO_MS, detalleEstado, estadoAlumno } from '../seguimiento.js'
 import { usePolling } from '../usePolling.js'
@@ -175,6 +175,7 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
   const [busqueda, setBusqueda] = useState('')
   const [seleccion, setSeleccion] = useState([])
   const [mensaje, setMensaje] = useState('')
+  const [aviso, setAviso] = useState('')
 
   const texto = busqueda.trim().toLowerCase()
   const candidatos = clase ? getAlumnos().filter((a) => clase.alumnos.includes(a.username)) : getAlumnos()
@@ -186,6 +187,9 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
         a.email?.toLowerCase().includes(texto))
   )
 
+  // Turno del mismo parcial en el que ya está el alumno: al asignarlo acá, sale de ese.
+  const otroTurno = (username) => getTurnosFor(turno.parcialId).find((t) => t.id !== turno.id && t.alumnos.includes(username))
+
   function toggle(username) {
     setSeleccion((current) =>
       current.includes(username) ? current.filter((u) => u !== username) : [...current, username]
@@ -194,13 +198,15 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
 
   async function handleAsignar() {
     try {
-      const rechazados = await asignarAlumnos(turno.id, seleccion)
+      const { rechazados, movidos } = await asignarAlumnos(turno.id, seleccion)
+      setAviso(movidos.map((m) => `${nombreDe(m.username)} pasó a este turno y salió del ${m.desde}.`).join(' '))
       setMensaje(
         rechazados.length === 0
           ? ''
           : `No se asignó a ${rechazados.map(nombreDe).join(', ')}: ya rinde este examen en otro turno que empezó.`
       )
     } catch (e) {
+      setAviso('')
       setMensaje(`No se pudo asignar. ${e.message}`)
     }
     setSeleccion([])
@@ -228,11 +234,13 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
               <label className="assign-option">
                 <input type="checkbox" checked={seleccion.includes(a.username)} onChange={() => toggle(a.username)} />
                 {a.nombre} <span className="muted small">{a.username}</span>
+                {otroTurno(a.username) && <span className="muted small">· ya está en el {nombreTurno(otroTurno(a.username))}</span>}
               </label>
             </li>
           ))}
         </ul>
       )}
+      {aviso && <p className="notice" role="status">{aviso}</p>}
       {mensaje && <p className="error">{mensaje}</p>}
       <div className="actions">
         <button type="button" onClick={handleAsignar} disabled={seleccion.length === 0}>

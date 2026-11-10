@@ -390,7 +390,7 @@ ruta('POST', '/api/turnos/:id/alumnos', 'profesor', async ({ params, body, sesio
       throw new HttpError(400, e.message)
     }
     await guardarTurnos(c, antes, resultado.turnos)
-    return { rechazados: resultado.rechazados }
+    return { rechazados: resultado.rechazados, movidos: resultado.movidos }
   })
 )
 
