@@ -12,11 +12,15 @@ export const SEGUIMIENTO_MS = 2000
 const SIN_SENAL_MS = 4000
 
 export function estadoAlumno({ sesion, entrega }, estadoDelTurno) {
-  if (entrega) return entrega.salidaVoluntaria ? 'salio-entrego' : 'entregado'
+  if (entrega) {
+    if (entrega.salidaVoluntaria) return 'salio-entrego'
+    return entrega.enviadoPorSistema || entrega.enviadoPorTiempo ? 'entregado-sistema' : 'entregado'
+  }
   if (!sesion) return estadoDelTurno === 'finalizado' ? 'no-completo' : 'no-abrio'
   if (sesion.estado === 'incidente') return 'incidente'
   if (sesion.estado === 'salio-entrego') return 'salio-entrego'
   if (sesion.estado === 'en-curso') return 'en-curso'
+  if (sesion.estado === 'entregado-sistema') return 'entregado-sistema'
   return 'entregado'
 }
 

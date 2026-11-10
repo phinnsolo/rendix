@@ -76,6 +76,8 @@ export const EVENTOS = {
 export const ESTADO_PANEL = {
   'en-curso': { label: 'En curso', className: 'chip pending' },
   entregado: { label: 'Entregado', className: 'chip published' },
+  // Abrió y no envió: lo entregó el sistema al terminarse el tiempo, con lo último guardado.
+  'entregado-sistema': { label: 'Entregado por sistema', className: 'chip' },
   'salio-entrego': { label: 'Salió y se entregó', className: 'chip exited' },
   incidente: { label: 'Incidente', className: 'chip incident' },
   'no-abrio': { label: 'No abrió', className: 'chip' },

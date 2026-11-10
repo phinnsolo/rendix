@@ -68,7 +68,8 @@ export default function TurnoDetailPage() {
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true }))
   const total = filas.length
   const abrieron = filas.filter((f) => f.apertura || f.entrega).length
-  const enviaron = filas.filter((f) => f.entrega).length
+  // Las entregas automáticas (abrió y no envió) no cuentan como envíos del alumno.
+  const enviaron = filas.filter((f) => f.entrega && f.estado !== 'entregado-sistema').length
 
   async function handleQuitar(username) {
     if (!window.confirm(`¿Quitar a ${nombreDe(username)} del turno?`)) return
