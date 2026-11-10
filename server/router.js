@@ -98,9 +98,15 @@ ruta('POST', '/api/registro', null, async ({ body }) => {
   if (enUso.some((u) => u.username.toLowerCase() === email || u.email === email)) errores.email = 'Ya hay una cuenta con ese mail.'
   validacion(errores)
   const sesion = { username, nombre: body.nombre.trim(), rol: 'alumno' }
-  await query('insert into usuarios (username, nombre, email, rol, password_hash) values ($1, $2, $3, $4, $5)', [
-    username, sesion.nombre, email, 'alumno', await hashPassword(body.password),
-  ])
+  try {
+    await query('insert into usuarios (username, nombre, email, rol, password_hash) values ($1, $2, $3, $4, $5)', [
+      username, sesion.nombre, email, 'alumno', await hashPassword(body.password),
+    ])
+  } catch (e) {
+    // Dos registros con el mismo usuario o mail a la vez: el segundo choca con la restricción única.
+    if (e.code === '23505') validacion(e.constraint === 'usuarios_email_key' ? { email: 'Ya hay una cuenta con ese mail.' } : { usuario: 'Ese usuario ya está en uso.' })
+    throw e
+  }
   return { sesion, token: crearToken(sesion) }
 })
 
@@ -538,10 +544,12 @@ ruta('PUT', '/api/entregas/:id/correccion', 'profesor', async ({ params, body, s
 // Modo restringido: el alumno acepta las reglas y entra en pantalla completa antes de empezar. El estado de la
 // sesión lo cambia solo el servidor (sesiones.js); la sesión y el alumno salen siempre del token, nunca del body.
 
-async function turnoDelAlumno(client, parcialId, alumno) {
+// `bloquear`: toma la fila del turno hasta el fin de la transacción, para que comenzar no se cruce con que el
+// profesor quite al alumno en el mismo instante (la remoción también la bloquea).
+async function turnoDelAlumno(client, parcialId, alumno, { bloquear = false } = {}) {
   const { rows } = await client.query(
     `select t.* from turnos t join documentos d on d.id = t.parcial_id
-     where t.parcial_id = $1 and $2 = any(t.alumnos) and d.estado = 'publicado' limit 1`,
+     where t.parcial_id = $1 and $2 = any(t.alumnos) and d.estado = 'publicado' limit 1${bloquear ? ' for update of t' : ''}`,
     [parcialId, alumno]
   )
   if (!rows[0]) throw new HttpError(404, 'El parcial no existe.')
@@ -606,7 +614,7 @@ ruta('GET', '/api/examen/:parcialId/estado', 'alumno', async ({ params, sesion }
 ruta('POST', '/api/examen/:parcialId/comenzar', 'alumno', async ({ params, body, sesion }) =>
   tx(async (c) => {
     const yo = sesion.username
-    const turno = await turnoDelAlumno(c, params.parcialId, yo)
+    const turno = await turnoDelAlumno(c, params.parcialId, yo, { bloquear: true })
     const existente = await sesionDelAlumno(c, params.parcialId, yo)
     if (existente) return { sesion: aSesion(existente) }
     if (await entregaDelAlumno(c, params.parcialId, yo)) throw new HttpError(409, 'Este parcial ya fue entregado.', { codigo: 'entregado' })
