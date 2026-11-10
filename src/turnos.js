@@ -4,7 +4,7 @@
 // inicio y hora de fin (inicio + duración del parcial), y los alumnos que lo rinden.
 // Las funciones `aplicar*` reciben los turnos de un profesor y devuelven la lista nueva, sin modificarla.
 
-import { TURNOS, ZONA_HORARIA, ZONA_HORARIA_IANA } from './config.js'
+import { DIAS, TURNOS, ZONA_HORARIA, ZONA_HORARIA_IANA } from './config.js'
 import { isValidDuracion } from './examSettings.js'
 import { now } from './clock.js'
 
@@ -102,11 +102,21 @@ export function byInicio(a, b) {
   return turnoInicio(a) - turnoInicio(b)
 }
 
+// Día de la semana (clave de DIAS) de una fecha del calendario 'AAAA-MM-DD'. No depende de la zona horaria.
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
+function diaDeSemana(fecha) {
+  return DIAS_SEMANA[new Date(`${fecha}T00:00:00Z`).getUTCDay()]
+}
+const plural = (dia) => (dia.endsWith('s') ? dia : `${dia}s`)
+
 // Devuelve { campo: mensaje } con los errores de un turno asignado; vacío si se puede guardar.
-export function validateHorario({ turno, fecha, horaInicio }, duracion, ahora = now()) {
+// Con `clase`, el turno tiene que caer el día y en el turno en que se dicta la clase (US4).
+export function validateHorario({ turno, fecha, horaInicio }, duracion, ahora = now(), clase = null) {
   const errores = {}
   if (!TURNOS[turno]) errores.turno = 'Elegí un turno.'
+  else if (clase && TURNOS[clase.turno] && turno !== clase.turno) errores.turno = `La clase se dicta en el ${TURNOS[clase.turno].nombre.toLowerCase()}.`
   if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) errores.fecha = 'La fecha es obligatoria.'
+  else if (clase && DIAS[clase.dia] && diaDeSemana(fecha) !== clase.dia) errores.fecha = `La clase se dicta los ${plural(DIAS[clase.dia].toLowerCase())}: elegí una fecha de ese día.`
   if (!isValidDuracion(duracion)) {
     errores.horaInicio = 'Primero indicá la duración del parcial.'
     return errores

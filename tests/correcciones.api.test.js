@@ -183,3 +183,32 @@ describe('BUG-010 / BUG-018: consignas obligatorias', () => {
     assert.equal(status, 200, JSON.stringify(body))
   })
 })
+
+describe('BUG-002 / BUG-003: la API no programa parciales fuera del día y turno de la clase', () => {
+  const crear = (horario) => e.api('POST', '/api/documentos', {
+    token: e.tokens.profesor1,
+    body: {
+      claseId: 'clase1', titulo: 'QA2-01 validaciones', tema: 'Tema 1', duracion: 60,
+      bloques: [{ id: 'b1', tipo: 'texto', consigna: 'Una consigna', contenido: '' }],
+      horarios: [horario],
+    },
+  })
+  const proximoLunes = () => {
+    const d = new Date(Date.now() + 7 * 86_400_000)
+    while (d.getUTCDay() !== 1) d.setUTCDate(d.getUTCDate() + 1)
+    return d.toISOString().slice(0, 10)
+  }
+  const diaSiguiente = (fecha) => new Date(Date.parse(`${fecha}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
+
+  test('rechaza el turno noche y el martes; acepta lunes a la mañana', async () => {
+    const lunes = proximoLunes()
+    const noche = await crear({ turno: 'noche', fecha: lunes, horaInicio: '19:00' })
+    assert.equal(noche.status, 400)
+    assert.match(noche.body.error, /turno mañana/)
+    const martes = await crear({ turno: 'manana', fecha: diaSiguiente(lunes), horaInicio: '08:00' })
+    assert.equal(martes.status, 400)
+    assert.match(martes.body.error, /lunes/)
+    const ok = await crear({ turno: 'manana', fecha: lunes, horaInicio: '08:00' })
+    assert.equal(ok.status, 200, JSON.stringify(ok.body))
+  })
+})

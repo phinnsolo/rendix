@@ -257,7 +257,7 @@ async function validarDocumento(client, body, profesor) {
   const horarios = Array.isArray(body.horarios) ? body.horarios : []
   for (const h of horarios) {
     if (!esObjeto(h)) throw new HttpError(400, 'Revisá los turnos asignados.')
-    const errores = validateHorario(h, body.duracion, Date.now())
+    const errores = validateHorario(h, body.duracion, Date.now(), clase)
     if (Object.keys(errores).length > 0) throw new HttpError(400, Object.values(errores)[0])
   }
   return {

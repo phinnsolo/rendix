@@ -109,7 +109,7 @@ export default function DocumentForm({
       setError(`La duración tiene que ser entre 1 y ${DURACION_MAXIMA} minutos.`)
       return
     }
-    const nuevosErrores = horarios.map((h) => (h.bloqueado ? {} : validateHorario(h, minutos)))
+    const nuevosErrores = horarios.map((h) => (h.bloqueado ? {} : validateHorario(h, minutos, undefined, getClase(claseId))))
     setErroresHorarios(nuevosErrores)
     if (horarios.length === 0) {
       setError('Asigná al menos un turno.')
