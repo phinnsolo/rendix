@@ -401,6 +401,7 @@ function ExamInProgress({ doc, sesion, verificar, onEntregado, onCerrado, onInte
         herramientas={getHerramientas(doc)}
         duracion={duracion}
         segundosRestantes={Math.ceil(restante / 1000)}
+        respondidas={{ hechas: blocks.length - sinResponder, total: blocks.length }}
         estadoGuardado={bloqueado ? null : estado}
         sticky
         onSalir={() => setDialogo('salir')}

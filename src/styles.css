@@ -284,6 +284,7 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .exam-header-main { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem 1rem; flex-wrap: wrap; }
 .exam-topic { font-weight: 700; font-size: 1.15rem; }
 .exam-time { font-variant-numeric: tabular-nums; }
+.exam-progress { font-variant-numeric: tabular-nums; }
 .exam-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; font-size: 0.9rem; }
 
 .code-editor { border: 1px solid var(--border); border-radius: var(--radius-control); overflow: hidden; }
@@ -420,7 +421,7 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .monitor-row.salio-entrego { --state: var(--primary); }
 .monitor-row.salio-entrego .monitor-bar > span { background: repeating-linear-gradient(-45deg, var(--primary) 0 6px, var(--primary-hover) 6px 9px); opacity: 0.75; }
 .monitor-row.no-abrio .monitor-estado-label, .monitor-row.no-completo .monitor-estado-label { color: var(--muted); font-weight: 400; }
-.monitor-name, .tracking-name { white-space: normal; overflow-wrap: anywhere; max-width: 16rem; }
+.monitor-table .monitor-name, .tracking-table .tracking-name { white-space: normal; overflow-wrap: anywhere; }
 .monitor-name { padding: 0; font-size: inherit; color: var(--text); text-align: left; }
 .monitor-name:hover:not(:disabled) { color: var(--primary); }
 .monitor-stats.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }

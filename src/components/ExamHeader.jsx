@@ -25,7 +25,8 @@ const GUARDADO = {
 // El tiempo restante solo aparece cuando llega `segundosRestantes` (el alumno está resolviendo), y el estado del
 // autoguardado cuando llega `estadoGuardado` ('guardando' | 'guardado' | 'sin-conexion' | 'sin-copia'). Con `onSalir` (modo
 // restringido) muestra el botón rojo SALIR, siempre visible porque la barra es fija.
-export default function ExamHeader({ tema, herramientas, duracion = null, segundosRestantes = null, estadoGuardado = null, sticky = false, onSalir = null, salirDeshabilitado = false }) {
+// `respondidas` ({ hechas, total }) muestra cuántas consignas respondió el alumno mientras resuelve.
+export default function ExamHeader({ tema, herramientas, duracion = null, segundosRestantes = null, respondidas = null, estadoGuardado = null, sticky = false, onSalir = null, salirDeshabilitado = false }) {
   const habilitadas = Object.entries(HERRAMIENTAS).filter(([key]) => herramientas[key])
   const resolviendo = segundosRestantes !== null
 
@@ -36,6 +37,11 @@ export default function ExamHeader({ tema, herramientas, duracion = null, segund
         {resolviendo && (
           <span className={claseTiempo(segundosRestantes)} role="timer" aria-label={`Tiempo restante ${formatRemaining(segundosRestantes)}`}>
             Tiempo restante: <strong>{formatRemaining(segundosRestantes)}</strong>
+          </span>
+        )}
+        {respondidas && (
+          <span className="exam-progress">
+            Respondiste <strong>{respondidas.hechas}</strong> de {respondidas.total}
           </span>
         )}
         {estadoGuardado && (
