@@ -1,6 +1,7 @@
 // API de Rendix: un solo punto de entrada (api/index.js en Vercel, middleware de Vite en desarrollo).
 // Cada ruta controla el rol y que el usuario sea dueño de lo que toca; las reglas vienen de src/.
 
+import { isDeepStrictEqual } from 'node:util'
 import { leerToken, crearToken, hashPassword, verifyPassword } from './auth.js'
 import { query, tx } from './db.js'
 import { HttpError, enviar, leerBody } from './http.js'
@@ -279,6 +280,15 @@ ruta('PUT', '/api/documentos/:id', 'profesor', async ({ params, body, sesion }) 
     // La duración queda fija cuando algún turno del parcial ya empezó.
     if (v.duracion !== anterior.duracion && antes.some((t) => t.parcialId === params.id && hasStarted(t, Date.now()))) {
       throw new HttpError(400, 'La duración no se puede cambiar: el parcial ya se empezó a tomar.')
+    }
+    // El tema y las consignas quedan fijos cuando algún alumno ya empezó (US2): su entrega responde a esa versión.
+    if (v.tema !== anterior.tema || !isDeepStrictEqual(v.bloques, anterior.bloques)) {
+      const { rows: [{ iniciado }] } = await c.query(
+        `select exists (select 1 from sesiones_examen where parcial_id = $1)
+             or exists (select 1 from entregas where parcial_id = $1) as iniciado`,
+        [params.id]
+      )
+      if (iniciado) throw new HttpError(409, 'El tema y las consignas no se pueden cambiar: un alumno ya empezó el parcial.')
     }
     const { rows } = await c.query(
       `update documentos set clase_id = $2, titulo = $3, tema = $4, herramientas = $5, duracion = $6, bloques = $7, contenido = $8,

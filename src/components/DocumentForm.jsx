@@ -23,7 +23,10 @@ function hasContent(block) {
 
 // `initialHorarios` son los turnos ya asignados al parcial (al editar).
 // `claseId` preselecciona la clase al crear un parcial desde ella.
-export default function DocumentForm({ initialValues, initialHorarios = [], claseId: claseInicial = '', onSubmit, submitLabel, cancelTo }) {
+// `contenidoBloqueado`: algún alumno ya empezó el parcial; el tema y las consignas se guardan tal como estaban.
+export default function DocumentForm({
+  initialValues, initialHorarios = [], claseId: claseInicial = '', contenidoBloqueado = false, onSubmit, submitLabel, cancelTo,
+}) {
   const formId = useId()
   const clases = getClasesDe(getSession().username)
   // Si el parcial no tiene clase (o ya no es de una clase del profesor), hay que elegirla.
@@ -97,7 +100,7 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
       setError(mensajeTitulo)
       return
     }
-    if (!tema) {
+    if (!contenidoBloqueado && !tema) {
       setError('Elegí un tema.')
       return
     }
@@ -116,7 +119,7 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
       setError('Revisá los turnos asignados.')
       return
     }
-    const blocksError = validateBlocks(bloques)
+    const blocksError = contenidoBloqueado ? null : validateBlocks(bloques)
     if (blocksError) {
       setError(blocksError)
       return
@@ -130,10 +133,10 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
       await onSubmit({
         claseId,
         titulo: titulo.trim(),
-        tema,
+        tema: contenidoBloqueado ? initialValues.tema : tema,
         herramientas,
         duracion: minutos,
-        bloques: saved,
+        bloques: contenidoBloqueado ? initialValues.bloques : saved,
         horarios: horarios
           .filter((h) => !h.bloqueado)
           .map(({ id, turno, fecha, horaInicio }) => ({ id, turno, fecha, horaInicio })),
@@ -175,7 +178,7 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
             ? <span className="field-error">{errorTitulo}</span>
             : <span className="muted hint">{titulo.length}/{TITULO_MAXIMO}</span>}
         </label>
-        <TopicSelector value={tema} onChange={setTema} />
+        <TopicSelector value={tema} onChange={setTema} disabled={contenidoBloqueado} />
         <DurationField value={duracion} onChange={setDuracion} disabled={duracionBloqueada} />
         <HorariosField
           value={horarios}
@@ -192,7 +195,10 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
 
       <div className="blocks">
         <span className="blocks-label">Consignas</span>
-        {bloques.map((block, index) => (
+        {contenidoBloqueado && (
+          <p className="notice muted">El tema y las consignas no se pueden cambiar: un alumno ya empezó el parcial.</p>
+        )}
+        {!contenidoBloqueado && bloques.map((block, index) => (
           <DocumentBlock
             key={block.id}
             block={block}
@@ -207,7 +213,7 @@ export default function DocumentForm({ initialValues, initialHorarios = [], clas
             }}
           />
         ))}
-        <BlockTypeSelector onSelect={(tipo) => setBloques((current) => [...current, createBlock(tipo)])} />
+        {!contenidoBloqueado && <BlockTypeSelector onSelect={(tipo) => setBloques((current) => [...current, createBlock(tipo)])} />}
       </div>
 
       {error && <p className="error">{error}</p>}
