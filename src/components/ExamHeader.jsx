@@ -17,12 +17,13 @@ function claseTiempo(seconds) {
 const GUARDADO = {
   guardando: 'Guardando…',
   guardado: 'Guardado',
-  'sin-conexion': 'Sin conexión (guardado en caché local)',
+  'sin-conexion': 'Sin conexión (guardado en este equipo)',
+  'sin-copia': 'Sin conexión y sin espacio en este equipo: lo último que escribiste no está guardado. No cierres esta pestaña.',
 }
 
 // Barra superior del examen: tema, duración y herramientas habilitadas.
 // El tiempo restante solo aparece cuando llega `segundosRestantes` (el alumno está resolviendo), y el estado del
-// autoguardado cuando llega `estadoGuardado` ('guardando' | 'guardado' | 'sin-conexion'). Con `onSalir` (modo
+// autoguardado cuando llega `estadoGuardado` ('guardando' | 'guardado' | 'sin-conexion' | 'sin-copia'). Con `onSalir` (modo
 // restringido) muestra el botón rojo SALIR, siempre visible porque la barra es fija.
 export default function ExamHeader({ tema, herramientas, duracion = null, segundosRestantes = null, estadoGuardado = null, sticky = false, onSalir = null, salirDeshabilitado = false }) {
   const habilitadas = Object.entries(HERRAMIENTAS).filter(([key]) => herramientas[key])

@@ -29,11 +29,14 @@ function leerCache(alumno, parcialId) {
   }
 }
 
+// Devuelve false si no se pudo escribir (almacenamiento lleno o bloqueado).
 function escribirCache(alumno, parcialId, respuestas, seq) {
   try {
     localStorage.setItem(cacheKey(alumno, parcialId), JSON.stringify({ respuestas, seq }))
+    return true
   } catch {
     // Sin espacio: queda solo lo que ya llegó al servidor, y se sigue intentando subir.
+    return false
   }
 }
 
@@ -56,7 +59,8 @@ export function respuestasIniciales(alumno, parcialId, sesion) {
   return { respuestas: sesion.respuestas ?? {}, seq: sesion.seq }
 }
 
-// `estado`: 'guardado' | 'guardando' | 'sin-conexion'. `onCerrado` se llama si el servidor avisa que la sesión
+// `estado`: 'guardado' | 'guardando' | 'sin-conexion' | 'sin-copia' (sin conexión y sin copia local: lo último
+// escrito solo está en la pantalla). `onCerrado` se llama si el servidor avisa que la sesión
 // ya no está en curso (se entregó, venció o quedó en Incidente).
 export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, onCerrado, onSinSenal }) {
   const [respuestas, setRespuestas] = useState(inicial.respuestas)
@@ -67,6 +71,7 @@ export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, 
   const timer = useRef(null)
   const [conectado, setConectado] = useState(true)
   const [pendiente, setPendiente] = useState(inicial.seq > serverSeq)
+  const [copiaLocal, setCopiaLocal] = useState(true)
   const bloqueadoRef = useRef(bloqueado)
   bloqueadoRef.current = bloqueado
   const onCerradoRef = useRef(onCerrado)
@@ -114,7 +119,7 @@ export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, 
     const nuevas = { ...respRef.current, [blockId]: valor }
     respRef.current = nuevas
     seqRef.current += 1
-    escribirCache(alumno, parcialId, nuevas, seqRef.current)
+    setCopiaLocal(escribirCache(alumno, parcialId, nuevas, seqRef.current))
     setRespuestas(nuevas)
     setPendiente(true)
     programar(ESPERA_GUARDADO_MS)
@@ -170,7 +175,7 @@ export function useAutosave({ alumno, parcialId, inicial, serverSeq, bloqueado, 
     return () => clearInterval(id)
   }, [bloqueado, parcialId])
 
-  const estado = !conectado ? 'sin-conexion' : pendiente ? 'guardando' : 'guardado'
+  const estado = !conectado ? (pendiente && !copiaLocal ? 'sin-copia' : 'sin-conexion') : pendiente ? 'guardando' : 'guardado'
   return { respuestas, respRef, seqRef, cambiar, estado }
 }
 

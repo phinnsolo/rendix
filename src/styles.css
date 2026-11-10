@@ -219,8 +219,8 @@ a.doc-title:hover { color: var(--primary); text-decoration: underline; }
 .save-status { font-size: 0.85rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.35rem; }
 .save-status::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--success); }
 .save-status.guardando::before { background: var(--highlight-border); }
-.save-status.sin-conexion { color: var(--danger); font-weight: 700; }
-.save-status.sin-conexion::before { background: var(--danger); }
+.save-status.sin-conexion, .save-status.sin-copia { color: var(--danger); font-weight: 700; }
+.save-status.sin-conexion::before, .save-status.sin-copia::before { background: var(--danger); }
 .exam-alerts:empty { display: none; }
 .exam-alert { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.75rem; padding: 0.6rem 1rem; font-weight: 700; color: var(--highlight-text); background: var(--highlight); border: 1px solid var(--highlight-border); border-radius: var(--radius-control); }
 .exam-alert.urgent { color: var(--danger); background: var(--danger-tint); border-color: var(--margin-line); }
