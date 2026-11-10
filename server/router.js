@@ -16,7 +16,7 @@ import { EVENTOS, SESION, UMBRAL_LATIDO_MS, esSenal } from '../src/estadoExamen.
 import { TEMAS } from '../src/config.js'
 import { validateClase } from '../src/clases.js'
 import { validateRegistro } from '../src/registro.js'
-import { BLOCK_TYPES, textFromBlocks, validateBlocks } from '../src/documentBlocks.js'
+import { BLOCK_TYPES, motivoNoPublicable, textFromBlocks, validateBlocks } from '../src/documentBlocks.js'
 import { getDuracion, getHerramientas, isValidDuracion, validateTitulo } from '../src/examSettings.js'
 import {
   aplicarAsignacion, aplicarBorrarVacios, aplicarCambioAlumnos, aplicarHorarios, aplicarQuitarAlumno, estadoTurno, hasStarted,
@@ -325,7 +325,9 @@ ruta('PUT', '/api/documentos/:id', 'profesor', async ({ params, body, sesion }) 
 
 ruta('POST', '/api/documentos/:id/publicar', 'profesor', async ({ params, sesion }) =>
   tx(async (c) => {
-    await documentoPropio(c, params.id, sesion.username, { bloquear: true })
+    const doc = await documentoPropio(c, params.id, sesion.username, { bloquear: true })
+    const motivo = motivoNoPublicable(doc)
+    if (motivo) throw new HttpError(400, motivo)
     const { rows: turnos } = await c.query('select * from turnos where parcial_id = $1', [params.id])
     if (!turnos.some((t) => estadoTurno(aTurno(t), Date.now()) === 'proximo')) {
       throw new HttpError(400, 'Para publicarlo, asignale un turno que todavía no haya empezado.')
@@ -355,6 +357,8 @@ ruta('POST', '/api/documentos/:id/tomar-ahora', 'profesor', async ({ params, ses
     const duracion = getDuracion(doc)
     if (!clase) throw new HttpError(400, 'Asignale una clase al parcial.')
     if (!isValidDuracion(duracion)) throw new HttpError(400, 'El parcial no tiene duración.')
+    const motivo = motivoNoPublicable(doc)
+    if (motivo) throw new HttpError(400, motivo)
     const ahora = Date.now()
     const antes = await turnosParaCambiar(c, sesion.username)
     if (antes.some((t) => t.parcialId === doc.id && estadoTurno(t, ahora) === 'en-curso')) {

@@ -55,6 +55,7 @@ export function getBlocks(doc) {
 // Devuelve un mensaje de error si algún apartado no se puede guardar, o null.
 export function validateBlocks(bloques) {
   for (const [index, block] of bloques.entries()) {
+    if (!String(block.consigna ?? '').trim()) return `El apartado ${index + 1} necesita una consigna.`
     if (block.tipo !== 'opcion-multiple') continue
     const name = `El apartado ${index + 1} (Multiple Choice)`
     if (block.opciones.length < 2) return `${name} necesita al menos 2 opciones.`
@@ -70,6 +71,13 @@ export function emptyAnswer(block) {
   if (block.tipo === 'geogebra') return block.ggbBase64
   if (block.tipo === 'opcion-multiple') return null // id de la opción elegida
   return ''
+}
+
+// Motivo por el que el parcial no se puede publicar ni tomar, o null. Un borrador puede quedar sin consignas;
+// publicado, no (Sprint 1 US4).
+export function motivoNoPublicable(doc) {
+  if (getBlocks(doc).length === 0) return 'El parcial necesita al menos una consigna para publicarse.'
+  return null
 }
 
 // Texto plano del documento (consignas y textos unidos). Se guarda en `contenido`

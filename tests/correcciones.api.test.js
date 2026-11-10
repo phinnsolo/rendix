@@ -130,8 +130,56 @@ describe('BUG-006 / BUG-012: el nombre de la clase no puede repetirse', () => {
 
   test('la base tampoco acepta nombres repetidos', async () => {
     await assert.rejects(
-      e.pool.query("insert into clases (id, nombre, dia, turno, profesores, alumnos) values ('x1', 'MATEMÁTICAS', 'lunes', 'manana', '{}', '{}')"),
+      e.db.query("insert into clases (id, nombre, dia, turno, profesores, alumnos) values ('x1', 'MATEMÁTICAS', 'lunes', 'manana', '{}', '{}')"),
       /unique|duplicate|único/i
     )
+  })
+})
+
+describe('BUG-010 / BUG-018: consignas obligatorias', () => {
+  // Parcial de profesor1 sin publicar, con un turno que todavía no empezó (dentro de 7 días, en el turno de la clase).
+  async function borrador(bloques) {
+    const fecha = new Date(Date.now() + 7 * 86_400_000)
+    while (fecha.getUTCDay() !== 1) fecha.setUTCDate(fecha.getUTCDate() + 1) // la clase se dicta los lunes
+    const id = `borrador-${Date.now()}-${Math.random()}`
+    await e.pool.query(
+      `insert into documentos (id, profesor, clase_id, titulo, tema, duracion, bloques) values ($1, 'profesor1', 'clase1', 'Borrador', 'Tema 1', 60, $2)`,
+      [id, JSON.stringify(bloques)]
+    )
+    const fechaIso = fecha.toISOString().slice(0, 10)
+    await e.pool.query(
+      `insert into turnos (id, profesor, parcial_id, turno, fecha, hora_inicio, hora_fin, inicio, fin, alumnos)
+       values ($1, 'profesor1', $2, 'manana', $3, '08:00', '09:00', $4, $5, '{alumno1}')`,
+      [`turno-${id}`, id, fechaIso, `${fechaIso}T08:00:00-03:00`, `${fechaIso}T09:00:00-03:00`]
+    )
+    return id
+  }
+
+  test('BUG-010: no se guarda un apartado sin consigna', async () => {
+    const { parcialId } = await e.parcialEnCurso()
+    const { status, body } = await editar(parcialId, {
+      titulo: 'Otro título',
+      bloques: [{ id: 'b1', tipo: 'texto', consigna: '¿Cuánto es 2 + 2?', contenido: '' }, { id: 'b2', tipo: 'texto', consigna: '   ', contenido: '' }],
+    })
+    // El contenido no cambia el tema ni las consignas válidas: primero se valida la consigna vacía.
+    assert.equal(status, 400)
+    assert.match(body.error, /apartado 2 necesita una consigna/)
+  })
+
+  test('BUG-018: no se publica ni se toma un parcial sin consignas', async () => {
+    const vacio = await borrador([])
+    const publicar = await e.api('POST', `/api/documentos/${vacio}/publicar`, { token: e.tokens.profesor1 })
+    assert.equal(publicar.status, 400)
+    assert.match(publicar.body.error, /al menos una consigna/)
+    const tomar = await e.api('POST', `/api/documentos/${vacio}/tomar-ahora`, { token: e.tokens.profesor1 })
+    assert.equal(tomar.status, 400)
+    const { rows: [d] } = await e.pool.query('select estado from documentos where id = $1', [vacio])
+    assert.notEqual(d.estado, 'publicado')
+  })
+
+  test('BUG-018: con una consigna se publica', async () => {
+    const id = await borrador([{ id: 'b1', tipo: 'texto', consigna: 'Una consigna', contenido: '' }])
+    const { status, body } = await e.api('POST', `/api/documentos/${id}/publicar`, { token: e.tokens.profesor1 })
+    assert.equal(status, 200, JSON.stringify(body))
   })
 })
