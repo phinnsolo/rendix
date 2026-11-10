@@ -12,6 +12,9 @@ export const TEMAS = ['Tema 1', 'Tema 2', 'Tema 3']
 // Largo máximo del título de un parcial, en caracteres.
 export const TITULO_MAXIMO = 100
 
+// Largo máximo del nombre de un usuario, en caracteres.
+export const NOMBRE_MAXIMO = 30
+
 // Duración del parcial en minutos (la elige el profesor al crearlo).
 export const DURACION_MAXIMA = 120
 export const DURACION_POR_DEFECTO = 60

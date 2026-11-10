@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { homePath, isLoggedIn, registrarAlumno, validateRegistro } from '../auth.js'
+import { NOMBRE_MAXIMO } from '../config.js'
 import logo from '../assets/rendix-logo.png'
 
 // Crear una cuenta de alumno. Después entra con el usuario o el mail, y la contraseña.
@@ -43,8 +44,10 @@ export default function RegisterPage() {
         </div>
         <label>
           Nombre
-          <input value={values.nombre} onChange={set('nombre')} autoComplete="name" autoFocus {...invalid('nombre')} />
-          {errores.nombre && <span className="field-error">{errores.nombre}</span>}
+          <input value={values.nombre} onChange={set('nombre')} autoComplete="name" maxLength={NOMBRE_MAXIMO} autoFocus {...invalid('nombre')} />
+          {errores.nombre
+            ? <span className="field-error">{errores.nombre}</span>
+            : <span className="muted hint">{values.nombre.length}/{NOMBRE_MAXIMO}</span>}
         </label>
         <label>
           Usuario

@@ -79,3 +79,27 @@ describe('BUG-019: el servidor decide si una entrega fue por tiempo', () => {
     assert.equal(entrega.enviado_por_tiempo, true)
   })
 })
+
+describe('registro: BUG-007 (contraseña de 8) y BUG-013 (nombre de hasta 30)', () => {
+  let n = 0
+  const registrar = (cambios = {}) => {
+    n += 1
+    return e.api('POST', '/api/registro', {
+      body: { nombre: 'Ana Gómez', usuario: `nuevo${n}`, email: `nuevo${n}@mail.com`, password: '12345678', ...cambios },
+    })
+  }
+
+  test('rechaza una contraseña de 7 caracteres y acepta una de 8', async () => {
+    const corta = await registrar({ password: '1234567' })
+    assert.equal(corta.status, 400)
+    assert.match(corta.body.errores.password, /8 caracteres/)
+    assert.equal((await registrar({ password: '12345678' })).status, 200)
+  })
+
+  test('rechaza un nombre de 31 caracteres y acepta uno de 30', async () => {
+    const largo = await registrar({ nombre: 'A'.repeat(31) })
+    assert.equal(largo.status, 400)
+    assert.match(largo.body.errores.nombre, /30 caracteres/)
+    assert.equal((await registrar({ nombre: 'A'.repeat(30) })).status, 200)
+  })
+})

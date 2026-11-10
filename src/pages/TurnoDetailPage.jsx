@@ -128,7 +128,7 @@ export default function TurnoDetailPage() {
               <tbody>
                 {filas.map((fila) => (
                   <tr key={fila.username}>
-                    <td>
+                    <td className="tracking-name">
                       {fila.nombre}
                       <span className="muted small table-sub">{fila.username}</span>
                     </td>
