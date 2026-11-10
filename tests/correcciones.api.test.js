@@ -53,3 +53,29 @@ describe('BUG-011: el contenido del parcial queda fijo cuando un alumno empezó'
     assert.equal(body.documento.titulo, 'Título corregido')
   })
 })
+
+describe('BUG-019: el servidor decide si una entrega fue por tiempo', () => {
+  test('una entrega "automática" con tiempo de sobra cuenta como entrega normal', async () => {
+    const { parcialId } = await e.parcialEnCurso()
+    await comenzar(parcialId, e.tokens.alumno1)
+    const { status } = await e.api('POST', `/api/examen/${parcialId}/entregar`, { token: e.tokens.alumno1, body: { automatico: true } })
+    assert.equal(status, 200)
+    const { rows: [entrega] } = await e.pool.query('select enviado_por_tiempo from entregas where parcial_id = $1 and alumno = $2', [parcialId, 'alumno1'])
+    assert.equal(entrega.enviado_por_tiempo, false)
+    const { rows } = await e.pool.query(
+      `select tipo from eventos_seguridad ev join sesiones_examen s on s.id = ev.sesion_id where s.parcial_id = $1 and s.alumno = $2`,
+      [parcialId, 'alumno1']
+    )
+    assert.ok(rows.some((r) => r.tipo === 'NORMAL_SUBMISSION'))
+    assert.ok(!rows.some((r) => r.tipo === 'TIME_EXPIRED'))
+  })
+
+  test('una entrega automática al llegar a cero sigue contando como por tiempo', async () => {
+    const { parcialId } = await e.parcialEnCurso()
+    await comenzar(parcialId, e.tokens.alumno1)
+    await e.pool.query(`update sesiones_examen set deadline = now() where parcial_id = $1 and alumno = 'alumno1'`, [parcialId])
+    await e.api('POST', `/api/examen/${parcialId}/entregar`, { token: e.tokens.alumno1, body: { automatico: true } })
+    const { rows: [entrega] } = await e.pool.query('select enviado_por_tiempo from entregas where parcial_id = $1 and alumno = $2', [parcialId, 'alumno1'])
+    assert.equal(entrega.enviado_por_tiempo, true)
+  })
+})
