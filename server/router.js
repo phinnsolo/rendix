@@ -170,26 +170,46 @@ async function validarMiembros(client, { profesores, alumnos }) {
   validacion(errores)
 }
 
+const NOMBRE_REPETIDO = { nombre: 'El nombre de la clase no puede repetirse.' }
+
+// El nombre no puede repetirse, sin distinguir mayúsculas (US3). El índice único clases_nombre_unico lo garantiza
+// también si dos pedidos llegan a la vez: esa violación se responde con el mismo error.
+async function validarNombreLibre(client, nombre, id = null) {
+  const { rows } = await client.query('select 1 from clases where lower(trim(nombre)) = lower(trim($1)) and id is distinct from $2', [nombre, id])
+  if (rows.length > 0) validacion({ ...NOMBRE_REPETIDO })
+}
+
+async function conNombreUnico(fn) {
+  try {
+    return await fn()
+  } catch (e) {
+    if (e.code === '23505' && e.constraint === 'clases_nombre_unico') validacion({ ...NOMBRE_REPETIDO })
+    throw e
+  }
+}
+
 ruta('POST', '/api/clases', 'dev', async ({ body }) => {
   validacion(validateClase(body))
-  return tx(async (c) => {
+  return conNombreUnico(() => tx(async (c) => {
     await validarMiembros(c, body)
+    await validarNombreLibre(c, body.nombre)
     const { rows } = await c.query(
       'insert into clases (id, nombre, dia, turno, profesores, alumnos) values ($1, $2, $3, $4, $5, $6) returning *',
       [crypto.randomUUID(), body.nombre.trim(), body.dia, body.turno, [...new Set(body.profesores)], [...new Set(body.alumnos)]]
     )
     return { clase: aClase(rows[0]) }
-  })
+  }))
 })
 
 // Los alumnos agregados quedan asignados a los parciales de la clase que todavía no se tomaron, y los quitados
 // salen de ellos.
 ruta('PUT', '/api/clases/:id', 'dev', async ({ params, body }) => {
   validacion(validateClase(body))
-  return tx(async (c) => {
+  return conNombreUnico(() => tx(async (c) => {
     await validarMiembros(c, body)
     const { rows: [anterior] } = await c.query('select * from clases where id = $1 for update', [params.id])
     if (!anterior) throw new HttpError(404, 'La clase no existe.')
+    await validarNombreLibre(c, body.nombre, params.id)
     const profesores = [...new Set(body.profesores)]
     const alumnos = [...new Set(body.alumnos)]
     const { rows } = await c.query(
@@ -209,7 +229,7 @@ ruta('PUT', '/api/clases/:id', 'dev', async ({ params, body }) => {
       }
     }
     return { clase: aClase(rows[0]) }
-  })
+  }))
 })
 
 // --- Parciales (profesor)

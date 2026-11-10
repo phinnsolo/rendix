@@ -103,3 +103,35 @@ describe('registro: BUG-007 (contraseña de 8) y BUG-013 (nombre de hasta 30)', 
     assert.equal((await registrar({ nombre: 'A'.repeat(30) })).status, 200)
   })
 })
+
+describe('BUG-006 / BUG-012: el nombre de la clase no puede repetirse', () => {
+  const clase = (nombre) => ({ nombre, dia: 'martes', turno: 'tarde', profesores: ['profesor2'], alumnos: ['alumno1'] })
+  const crear = (nombre) => e.api('POST', '/api/clases', { token: e.tokens.dev1, body: clase(nombre) })
+
+  test('rechaza el mismo nombre exacto y con otras mayúsculas o espacios', async () => {
+    // 'Matemáticas' ya existe (clase1 del entorno).
+    for (const nombre of ['Matemáticas', 'matemáticas', '  MATEMÁTICAS ']) {
+      const { status, body } = await crear(nombre)
+      assert.equal(status, 400, nombre)
+      assert.equal(body.errores.nombre, 'El nombre de la clase no puede repetirse.')
+    }
+    const { rows } = await e.pool.query("select count(*)::int as n from clases where lower(trim(nombre)) = 'matemáticas'")
+    assert.equal(rows[0].n, 1)
+  })
+
+  test('al editar, no se puede usar el nombre de otra clase, pero sí conservar el propio', async () => {
+    const { body } = await crear('Física')
+    const id = body.clase.id
+    const ajeno = await e.api('PUT', `/api/clases/${id}`, { token: e.tokens.dev1, body: clase('matemáticas') })
+    assert.equal(ajeno.status, 400)
+    const propio = await e.api('PUT', `/api/clases/${id}`, { token: e.tokens.dev1, body: clase('FÍSICA') })
+    assert.equal(propio.status, 200, JSON.stringify(propio.body))
+  })
+
+  test('la base tampoco acepta nombres repetidos', async () => {
+    await assert.rejects(
+      e.pool.query("insert into clases (id, nombre, dia, turno, profesores, alumnos) values ('x1', 'MATEMÁTICAS', 'lunes', 'manana', '{}', '{}')"),
+      /unique|duplicate|único/i
+    )
+  })
+})

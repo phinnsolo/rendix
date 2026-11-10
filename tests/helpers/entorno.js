@@ -25,6 +25,7 @@ export async function crearEntorno() {
 
   const hash = await hashPassword('rendix123')
   const usuarios = [
+    ['dev1', 'Dev Demo', 'dev'],
     ['profesor1', 'Prof. Juan Pérez', 'profesor'],
     ['profesor2', 'Profesor Demo 2', 'profesor'],
     ['alumno1', 'Alumno Demo 1', 'alumno'],
