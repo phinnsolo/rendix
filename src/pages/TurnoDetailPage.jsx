@@ -5,7 +5,7 @@ import { getClase } from '../clasesStore.js'
 import { getDocument, isPublished } from '../documentsStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
-import { asignarAlumnos, estadoTurno, formatHorario, getSeguimiento, getTurno, quitarAlumno } from '../turnosStore.js'
+import { asignarAlumnos, estadoTurno, formatHorario, getSeguimiento, getTurno, getTurnosFor, nombreTurno, quitarAlumno } from '../turnosStore.js'
 import { now } from '../clock.js'
 import { SEGUIMIENTO_MS, detalleEstado, estadoAlumno } from '../seguimiento.js'
 import { usePolling } from '../usePolling.js'
@@ -68,7 +68,8 @@ export default function TurnoDetailPage() {
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true }))
   const total = filas.length
   const abrieron = filas.filter((f) => f.apertura || f.entrega).length
-  const enviaron = filas.filter((f) => f.entrega).length
+  // Las entregas automáticas (abrió y no envió) no cuentan como envíos del alumno.
+  const enviaron = filas.filter((f) => f.entrega && f.estado !== 'entregado-sistema').length
 
   async function handleQuitar(username) {
     if (!window.confirm(`¿Quitar a ${nombreDe(username)} del turno?`)) return
@@ -128,7 +129,7 @@ export default function TurnoDetailPage() {
               <tbody>
                 {filas.map((fila) => (
                   <tr key={fila.username}>
-                    <td>
+                    <td className="tracking-name">
                       {fila.nombre}
                       <span className="muted small table-sub">{fila.username}</span>
                     </td>
@@ -174,6 +175,7 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
   const [busqueda, setBusqueda] = useState('')
   const [seleccion, setSeleccion] = useState([])
   const [mensaje, setMensaje] = useState('')
+  const [aviso, setAviso] = useState('')
 
   const texto = busqueda.trim().toLowerCase()
   const candidatos = clase ? getAlumnos().filter((a) => clase.alumnos.includes(a.username)) : getAlumnos()
@@ -185,6 +187,9 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
         a.email?.toLowerCase().includes(texto))
   )
 
+  // Turno del mismo parcial en el que ya está el alumno: al asignarlo acá, sale de ese.
+  const otroTurno = (username) => getTurnosFor(turno.parcialId).find((t) => t.id !== turno.id && t.alumnos.includes(username))
+
   function toggle(username) {
     setSeleccion((current) =>
       current.includes(username) ? current.filter((u) => u !== username) : [...current, username]
@@ -193,13 +198,15 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
 
   async function handleAsignar() {
     try {
-      const rechazados = await asignarAlumnos(turno.id, seleccion)
+      const { rechazados, movidos } = await asignarAlumnos(turno.id, seleccion)
+      setAviso(movidos.map((m) => `${nombreDe(m.username)} pasó a este turno y salió del ${m.desde}.`).join(' '))
       setMensaje(
         rechazados.length === 0
           ? ''
           : `No se asignó a ${rechazados.map(nombreDe).join(', ')}: ya rinde este examen en otro turno que empezó.`
       )
     } catch (e) {
+      setAviso('')
       setMensaje(`No se pudo asignar. ${e.message}`)
     }
     setSeleccion([])
@@ -227,11 +234,13 @@ function AsignarAlumnos({ turno, clase, onAsignados }) {
               <label className="assign-option">
                 <input type="checkbox" checked={seleccion.includes(a.username)} onChange={() => toggle(a.username)} />
                 {a.nombre} <span className="muted small">{a.username}</span>
+                {otroTurno(a.username) && <span className="muted small">· ya está en el {nombreTurno(otroTurno(a.username))}</span>}
               </label>
             </li>
           ))}
         </ul>
       )}
+      {aviso && <p className="notice" role="status">{aviso}</p>}
       {mensaje && <p className="error">{mensaje}</p>}
       <div className="actions">
         <button type="button" onClick={handleAsignar} disabled={seleccion.length === 0}>

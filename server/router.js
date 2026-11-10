@@ -1,6 +1,7 @@
 // API de Rendix: un solo punto de entrada (api/index.js en Vercel, middleware de Vite en desarrollo).
 // Cada ruta controla el rol y que el usuario sea dueño de lo que toca; las reglas vienen de src/.
 
+import { isDeepStrictEqual } from 'node:util'
 import { leerToken, crearToken, hashPassword, verifyPassword } from './auth.js'
 import { query, tx } from './db.js'
 import { HttpError, enviar, leerBody } from './http.js'
@@ -15,7 +16,7 @@ import { EVENTOS, SESION, UMBRAL_LATIDO_MS, esSenal } from '../src/estadoExamen.
 import { TEMAS } from '../src/config.js'
 import { validateClase } from '../src/clases.js'
 import { validateRegistro } from '../src/registro.js'
-import { BLOCK_TYPES, textFromBlocks, validateBlocks } from '../src/documentBlocks.js'
+import { BLOCK_TYPES, CODE_LANGUAGES, motivoNoPublicable, textFromBlocks, validateBlocks } from '../src/documentBlocks.js'
 import { getDuracion, getHerramientas, isValidDuracion, validateTitulo } from '../src/examSettings.js'
 import {
   aplicarAsignacion, aplicarBorrarVacios, aplicarCambioAlumnos, aplicarHorarios, aplicarQuitarAlumno, estadoTurno, hasStarted,
@@ -71,6 +72,17 @@ function validacion(errores) {
 const esTexto = (v, max = 10_000) => typeof v === 'string' && v.length <= max
 const esObjeto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 
+// Forma de un apartado según su tipo (ver src/documentBlocks.js). Lo que no la cumple se rechaza con 400 antes de
+// que las reglas lo lean.
+function bloqueBienFormado(b) {
+  if (!esObjeto(b) || !BLOCK_TYPES[b.tipo] || typeof b.id !== 'string' || typeof b.consigna !== 'string') return false
+  if (b.tipo === 'texto') return typeof b.contenido === 'string'
+  if (b.tipo === 'codigo') return typeof b.contenido === 'string' && (b.lenguaje === undefined || Boolean(CODE_LANGUAGES[b.lenguaje]))
+  if (b.tipo === 'geogebra') return b.ggbBase64 == null || typeof b.ggbBase64 === 'string'
+  return Array.isArray(b.opciones) &&
+    b.opciones.every((o) => esObjeto(o) && typeof o.id === 'string' && typeof o.texto === 'string' && typeof o.correcta === 'boolean')
+}
+
 // --- Cuentas
 
 ruta('POST', '/api/login', null, async ({ body }) => {
@@ -97,9 +109,15 @@ ruta('POST', '/api/registro', null, async ({ body }) => {
   if (enUso.some((u) => u.username.toLowerCase() === email || u.email === email)) errores.email = 'Ya hay una cuenta con ese mail.'
   validacion(errores)
   const sesion = { username, nombre: body.nombre.trim(), rol: 'alumno' }
-  await query('insert into usuarios (username, nombre, email, rol, password_hash) values ($1, $2, $3, $4, $5)', [
-    username, sesion.nombre, email, 'alumno', await hashPassword(body.password),
-  ])
+  try {
+    await query('insert into usuarios (username, nombre, email, rol, password_hash) values ($1, $2, $3, $4, $5)', [
+      username, sesion.nombre, email, 'alumno', await hashPassword(body.password),
+    ])
+  } catch (e) {
+    // Dos registros con el mismo usuario o mail a la vez: el segundo choca con la restricción única.
+    if (e.code === '23505') validacion(e.constraint === 'usuarios_email_key' ? { email: 'Ya hay una cuenta con ese mail.' } : { usuario: 'Ese usuario ya está en uso.' })
+    throw e
+  }
   return { sesion, token: crearToken(sesion) }
 })
 
@@ -169,26 +187,46 @@ async function validarMiembros(client, { profesores, alumnos }) {
   validacion(errores)
 }
 
+const NOMBRE_REPETIDO = { nombre: 'El nombre de la clase no puede repetirse.' }
+
+// El nombre no puede repetirse, sin distinguir mayúsculas (US3). El índice único clases_nombre_unico lo garantiza
+// también si dos pedidos llegan a la vez: esa violación se responde con el mismo error.
+async function validarNombreLibre(client, nombre, id = null) {
+  const { rows } = await client.query('select 1 from clases where lower(trim(nombre)) = lower(trim($1)) and id is distinct from $2', [nombre, id])
+  if (rows.length > 0) validacion({ ...NOMBRE_REPETIDO })
+}
+
+async function conNombreUnico(fn) {
+  try {
+    return await fn()
+  } catch (e) {
+    if (e.code === '23505' && e.constraint === 'clases_nombre_unico') validacion({ ...NOMBRE_REPETIDO })
+    throw e
+  }
+}
+
 ruta('POST', '/api/clases', 'dev', async ({ body }) => {
   validacion(validateClase(body))
-  return tx(async (c) => {
+  return conNombreUnico(() => tx(async (c) => {
     await validarMiembros(c, body)
+    await validarNombreLibre(c, body.nombre)
     const { rows } = await c.query(
       'insert into clases (id, nombre, dia, turno, profesores, alumnos) values ($1, $2, $3, $4, $5, $6) returning *',
       [crypto.randomUUID(), body.nombre.trim(), body.dia, body.turno, [...new Set(body.profesores)], [...new Set(body.alumnos)]]
     )
     return { clase: aClase(rows[0]) }
-  })
+  }))
 })
 
 // Los alumnos agregados quedan asignados a los parciales de la clase que todavía no se tomaron, y los quitados
 // salen de ellos.
 ruta('PUT', '/api/clases/:id', 'dev', async ({ params, body }) => {
   validacion(validateClase(body))
-  return tx(async (c) => {
+  return conNombreUnico(() => tx(async (c) => {
     await validarMiembros(c, body)
     const { rows: [anterior] } = await c.query('select * from clases where id = $1 for update', [params.id])
     if (!anterior) throw new HttpError(404, 'La clase no existe.')
+    await validarNombreLibre(c, body.nombre, params.id)
     const profesores = [...new Set(body.profesores)]
     const alumnos = [...new Set(body.alumnos)]
     const { rows } = await c.query(
@@ -208,7 +246,7 @@ ruta('PUT', '/api/clases/:id', 'dev', async ({ params, body }) => {
       }
     }
     return { clase: aClase(rows[0]) }
-  })
+  }))
 })
 
 // --- Parciales (profesor)
@@ -228,7 +266,7 @@ async function validarDocumento(client, body, profesor) {
   if (!TEMAS.includes(body.tema)) throw new HttpError(400, 'Elegí un tema.')
   if (!isValidDuracion(body.duracion)) throw new HttpError(400, 'La duración no es válida.')
   const bloques = body.bloques
-  if (!Array.isArray(bloques) || bloques.some((b) => !esObjeto(b) || !BLOCK_TYPES[b.tipo] || typeof b.id !== 'string')) {
+  if (!Array.isArray(bloques) || !bloques.every(bloqueBienFormado)) {
     throw new HttpError(400, 'Los apartados no son válidos.')
   }
   const errorBloques = validateBlocks(bloques)
@@ -236,7 +274,7 @@ async function validarDocumento(client, body, profesor) {
   const horarios = Array.isArray(body.horarios) ? body.horarios : []
   for (const h of horarios) {
     if (!esObjeto(h)) throw new HttpError(400, 'Revisá los turnos asignados.')
-    const errores = validateHorario(h, body.duracion, Date.now())
+    const errores = validateHorario(h, body.duracion, Date.now(), clase)
     if (Object.keys(errores).length > 0) throw new HttpError(400, Object.values(errores)[0])
   }
   return {
@@ -280,6 +318,15 @@ ruta('PUT', '/api/documentos/:id', 'profesor', async ({ params, body, sesion }) 
     if (v.duracion !== anterior.duracion && antes.some((t) => t.parcialId === params.id && hasStarted(t, Date.now()))) {
       throw new HttpError(400, 'La duración no se puede cambiar: el parcial ya se empezó a tomar.')
     }
+    // El tema y las consignas quedan fijos cuando algún alumno ya empezó (US2): su entrega responde a esa versión.
+    if (v.tema !== anterior.tema || !isDeepStrictEqual(v.bloques, anterior.bloques)) {
+      const { rows: [{ iniciado }] } = await c.query(
+        `select exists (select 1 from sesiones_examen where parcial_id = $1)
+             or exists (select 1 from entregas where parcial_id = $1) as iniciado`,
+        [params.id]
+      )
+      if (iniciado) throw new HttpError(409, 'El tema y las consignas no se pueden cambiar: un alumno ya empezó el parcial.')
+    }
     const { rows } = await c.query(
       `update documentos set clase_id = $2, titulo = $3, tema = $4, herramientas = $5, duracion = $6, bloques = $7, contenido = $8,
        fecha_modificacion = now() where id = $1 returning *`,
@@ -295,7 +342,9 @@ ruta('PUT', '/api/documentos/:id', 'profesor', async ({ params, body, sesion }) 
 
 ruta('POST', '/api/documentos/:id/publicar', 'profesor', async ({ params, sesion }) =>
   tx(async (c) => {
-    await documentoPropio(c, params.id, sesion.username, { bloquear: true })
+    const doc = await documentoPropio(c, params.id, sesion.username, { bloquear: true })
+    const motivo = motivoNoPublicable(doc)
+    if (motivo) throw new HttpError(400, motivo)
     const { rows: turnos } = await c.query('select * from turnos where parcial_id = $1', [params.id])
     if (!turnos.some((t) => estadoTurno(aTurno(t), Date.now()) === 'proximo')) {
       throw new HttpError(400, 'Para publicarlo, asignale un turno que todavía no haya empezado.')
@@ -325,6 +374,8 @@ ruta('POST', '/api/documentos/:id/tomar-ahora', 'profesor', async ({ params, ses
     const duracion = getDuracion(doc)
     if (!clase) throw new HttpError(400, 'Asignale una clase al parcial.')
     if (!isValidDuracion(duracion)) throw new HttpError(400, 'El parcial no tiene duración.')
+    const motivo = motivoNoPublicable(doc)
+    if (motivo) throw new HttpError(400, motivo)
     const ahora = Date.now()
     const antes = await turnosParaCambiar(c, sesion.username)
     if (antes.some((t) => t.parcialId === doc.id && estadoTurno(t, ahora) === 'en-curso')) {
@@ -356,7 +407,7 @@ ruta('POST', '/api/turnos/:id/alumnos', 'profesor', async ({ params, body, sesio
       throw new HttpError(400, e.message)
     }
     await guardarTurnos(c, antes, resultado.turnos)
-    return { rechazados: resultado.rechazados }
+    return { rechazados: resultado.rechazados, movidos: resultado.movidos }
   })
 )
 
@@ -504,10 +555,12 @@ ruta('PUT', '/api/entregas/:id/correccion', 'profesor', async ({ params, body, s
 // Modo restringido: el alumno acepta las reglas y entra en pantalla completa antes de empezar. El estado de la
 // sesión lo cambia solo el servidor (sesiones.js); la sesión y el alumno salen siempre del token, nunca del body.
 
-async function turnoDelAlumno(client, parcialId, alumno) {
+// `bloquear`: toma la fila del turno hasta el fin de la transacción, para que comenzar no se cruce con que el
+// profesor quite al alumno en el mismo instante (la remoción también la bloquea).
+async function turnoDelAlumno(client, parcialId, alumno, { bloquear = false } = {}) {
   const { rows } = await client.query(
     `select t.* from turnos t join documentos d on d.id = t.parcial_id
-     where t.parcial_id = $1 and $2 = any(t.alumnos) and d.estado = 'publicado' limit 1`,
+     where t.parcial_id = $1 and $2 = any(t.alumnos) and d.estado = 'publicado' limit 1${bloquear ? ' for update of t' : ''}`,
     [parcialId, alumno]
   )
   if (!rows[0]) throw new HttpError(404, 'El parcial no existe.')
@@ -572,7 +625,7 @@ ruta('GET', '/api/examen/:parcialId/estado', 'alumno', async ({ params, sesion }
 ruta('POST', '/api/examen/:parcialId/comenzar', 'alumno', async ({ params, body, sesion }) =>
   tx(async (c) => {
     const yo = sesion.username
-    const turno = await turnoDelAlumno(c, params.parcialId, yo)
+    const turno = await turnoDelAlumno(c, params.parcialId, yo, { bloquear: true })
     const existente = await sesionDelAlumno(c, params.parcialId, yo)
     if (existente) return { sesion: aSesion(existente) }
     if (await entregaDelAlumno(c, params.parcialId, yo)) throw new HttpError(409, 'Este parcial ya fue entregado.', { codigo: 'entregado' })

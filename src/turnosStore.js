@@ -31,12 +31,12 @@ export function proximoTurno(parcialId) {
 }
 
 // Agrega alumnos sin repetir. Si un alumno está en otro turno del mismo parcial que todavía no empezó,
-// se lo mueve a este. Devuelve los que no se pudieron asignar porque ya rinden ese examen en otro turno
-// que empezó.
+// se lo mueve a este. Devuelve { rechazados, movidos }: los que no se pudieron asignar porque ya rinden ese
+// examen en otro turno que empezó, y los que se pasaron desde otro turno ({ username, desde }).
 export async function asignarAlumnos(id, usernames) {
-  const { rechazados } = await request('POST', `/api/turnos/${id}/alumnos`, { usernames })
+  const { rechazados, movidos = [] } = await request('POST', `/api/turnos/${id}/alumnos`, { usernames })
   await recargarDatos()
-  return rechazados
+  return { rechazados, movidos }
 }
 
 export async function quitarAlumno(id, username) {

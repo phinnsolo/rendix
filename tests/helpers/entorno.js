@@ -25,6 +25,7 @@ export async function crearEntorno() {
 
   const hash = await hashPassword('rendix123')
   const usuarios = [
+    ['dev1', 'Dev Demo', 'dev'],
     ['profesor1', 'Prof. Juan Pérez', 'profesor'],
     ['profesor2', 'Profesor Demo 2', 'profesor'],
     ['alumno1', 'Alumno Demo 1', 'alumno'],
@@ -68,11 +69,11 @@ export async function crearEntorno() {
     n += 1
     const id = `parcial${n}`
     const bloques = [
-      { id: 'b1', tipo: 'texto', consigna: '¿Cuánto es 2 + 2?' },
-      { id: 'b2', tipo: 'texto', consigna: 'Explicá por qué.' },
+      { id: 'b1', tipo: 'texto', consigna: '¿Cuánto es 2 + 2?', contenido: '' },
+      { id: 'b2', tipo: 'texto', consigna: 'Explicá por qué.', contenido: '' },
     ]
     await pool.query(
-      `insert into documentos (id, profesor, clase_id, titulo, tema, duracion, bloques) values ($1, 'profesor1', 'clase1', $2, 'Álgebra', $3, $4)`,
+      `insert into documentos (id, profesor, clase_id, titulo, tema, duracion, bloques) values ($1, 'profesor1', 'clase1', $2, 'Tema 1', $3, $4)`,
       [id, `Parcial ${n}`, duracion, JSON.stringify(bloques)]
     )
     const { status, body } = await api('POST', `/api/documentos/${id}/tomar-ahora`, { token: tokens.profesor1 })

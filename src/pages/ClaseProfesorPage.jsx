@@ -9,6 +9,7 @@ import NotFound from '../components/NotFound.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
 import TomarAhoraButton from '../components/TomarAhoraButton.jsx'
 import BackLink from '../components/BackLink.jsx'
+import { motivoNoPublicable } from '../documentBlocks.js'
 
 const TABS = { parciales: 'Parciales', entregas: 'Entregas' }
 
@@ -123,8 +124,8 @@ export default function ClaseProfesorPage() {
                     <button
                       type="button"
                       onClick={() => handlePublish(doc)}
-                      disabled={!proximo}
-                      title={proximo ? undefined : 'Asignale un turno que todavía no haya empezado'}
+                      disabled={!proximo || Boolean(motivoNoPublicable(doc))}
+                      title={motivoNoPublicable(doc) ?? (proximo ? undefined : 'Asignale un turno que todavía no haya empezado')}
                     >
                       Publicar
                     </button>

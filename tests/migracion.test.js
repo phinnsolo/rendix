@@ -20,7 +20,7 @@ test('migración sobre datos existentes: conserva sesiones, respuestas y entrega
     insert into entregas (id, parcial_id, profesor, alumno, alumno_nombre, titulo, respuestas) values ('e1', 'd1', 'p', 'a', 'Alu', 'Parcial viejo', '{"b1": "respuesta vieja"}');
   `)
 
-  assert.deepEqual(await aplicarMigraciones(ejecutar), ['001_modo_restringido.sql'])
+  assert.deepEqual(await aplicarMigraciones(ejecutar), ['001_modo_restringido.sql', '002_clases_nombre_unico.sql'])
   assert.deepEqual(await aplicarMigraciones(ejecutar), []) // ya aplicada: no se repite
 
   const { rows: [s] } = await db.query("select * from sesiones_examen where turno_id = 't1'")
@@ -37,5 +37,24 @@ test('migración sobre datos existentes: conserva sesiones, respuestas y entrega
   await assert.rejects(db.exec("update sesiones_examen set estado = 'reanudado' where turno_id = 't1'"))
   // Correr el SQL de nuevo a mano tampoco rompe nada (es idempotente).
   await db.exec(await readFile(new URL('../db/migrations/001_modo_restringido.sql', import.meta.url), 'utf8'))
+  await db.close()
+})
+
+test('migración 002: con clases de nombre repetido se detiene, las nombra y no deja nada a medias', async () => {
+  const db = await PGlite.create()
+  const ejecutar = async (sql) => (await db.exec(sql)).at(-1)
+  await db.exec(await readFile(new URL('../db/schema.sql', import.meta.url), 'utf8'))
+  await db.exec(`
+    insert into clases (id, nombre, dia, turno, profesores, alumnos) values
+      ('c1', 'Matemáticas', 'lunes', 'manana', '{}', '{}'), ('c2', 'matemáticas ', 'lunes', 'manana', '{}', '{}');
+  `)
+  await assert.rejects(aplicarMigraciones(ejecutar), /mismo nombre.*c1, c2|mismo nombre.*c2, c1/)
+  await db.exec('rollback').catch(() => {})
+  const { rows } = await db.query("select nombre from migraciones where nombre = '002_clases_nombre_unico.sql'")
+  assert.equal(rows.length, 0)
+
+  // Renombrada a mano, se aplica.
+  await db.exec("update clases set nombre = 'Matemáticas II' where id = 'c2'")
+  assert.deepEqual(await aplicarMigraciones(ejecutar), ['002_clases_nombre_unico.sql'])
   await db.close()
 })

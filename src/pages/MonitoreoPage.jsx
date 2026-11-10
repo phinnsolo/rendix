@@ -13,7 +13,7 @@ import { usePolling } from '../usePolling.js'
 
 // Primero los incidentes (requieren una decisión del profesor), después los que están rindiendo y al final los que
 // terminaron.
-const ORDEN = ['incidente', 'en-curso', 'no-abrio', 'no-completo', 'salio-entrego', 'entregado']
+const ORDEN = ['incidente', 'en-curso', 'no-abrio', 'no-completo', 'entregado-sistema', 'salio-entrego', 'entregado']
 
 const hora = (iso) => new Date(iso).toLocaleTimeString('es-AR', { timeZone: ZONA_HORARIA_IANA, hour12: false })
 

@@ -1,0 +1,105 @@
+REGISTRO GENERAL DE BUGS (QA),,,,,,,,,,
+Consolidado de hallazgos detectados por los 7 Equipos de QA,,,,,,,,,,
+,,,,,,,,,,
+ID Bug,Fecha Registro,Equipo QA,Sprint,Ref (CU / RF),Título del Bug,Pasos para Reproducir,Resultado Esperado,Resultado Obtenido,Captura / Link,Estado
+BUG-001,20-10-2026,ejemplo,Sprint 1,CU1 / RF1,Error al guardar examen en borrador,"1. Crear examen
+2. Dejar título vacío
+3. Clic en guardar",Muestra mensaje de validación,Se rompe la pantalla con error 500,https://drive.google.com/bug001,
+BUG-001,06-10-2026,QA 8,Sprint 1,TC-020,Título largo sin espacios desborda la pantalla y empuja 'Eliminar' fuera de la vista,"1. Ir a /documentos/nuevo. 
+2. En 'Título' ingresar 289 caracteres 'A' sin espacios.
+3. Clic en 'Crear'.
+4. Observar la página del documento.
+5. Ir a /documentos y observar el listado.","El título se ajusta o se corta sin romper el diseño, y los botones 'Editar' y 'Eliminar' quedan visibles. [Límite de largo a definir con el PM]","Aparece scroll horizontal, el título queda cortado y en el listado 'Eliminar' sale de la vista. No hay límite de largo en el formulario.",.,Ya corregido antes de esta ronda (51611c7: límite de 100 caracteres y diseño de títulos largos)
+BUG-002,13-10-2026,QA 8,Sprint 2,TC-140,Se puede programar un parcial en un turno en que la clase no se dicta,"1. Ir a /documentos/nuevo.
+2. Clase Matemáticas, título 'QA2-01 validaciones', Tema 1, duración 60.
+3. Turno: 'Turno noche', fecha lunes 26/10/2026, hora 19:00.
+4. Crear.",No guarda y muestra un error: el turno no es compatible con los turnos en que se dicta la clase (criterio de US4).,"Se crea el parcial en 'Turno noche · lun, 26/10/2026 · 19:00 a 20:00' con los 5 alumnos de la clase asignados.",,Corregido en 0ad1afb
+BUG-003,13-10-2026,QA 8,Sprint 2,TC-236,Se puede programar un parcial en un dia que la clase no se dicta ,"1. Ir a /documentos/nuevo.
+2. Clase Matemáticas, título 'QA2-03 martes', Tema 1, duración 60.
+3. Turno mañana, fecha martes 27/10/2026, hora 08:00.
+4. Crear.",No guarda y muestra un error de día no válido para la clase. [Regla a confirmar con la PM],"Se crea el parcial 'Turno mañana · mar, 27/10/2026 · 08:00 a 09:00'.",,Corregido en 0ad1afb
+BUG-004,13-10-2026,QA 8,Sprint 2,TC-188,No se muestra el contador de consignas respondidas sobre el total,"1. Entrar como alumno1 y abrir 'QA2-06 ejecucion'.
+2. Comenzar el parcial.
+3. Responder algunas consignas.
+4. Buscar el contador.",Se muestra cuántas consignas respondió sobre el total (ej. 3 de 4) y se actualiza al responder.,"No hay contador en ningún momento. Solo se ven las 4 consignas, el tiempo restante y el botón Enviar parcial.",,Corregido en e9c651d
+BUG-005,13-10-2026,QA 8,Sprint 2,TC-214,El alumno que abre y no envia figura 'enviado' en lugar de 'no completo',"1. Como alumno2, abrir y comenzar el parcial, escribir una respuesta.
+2. No enviar.
+3. Esperar a las 16:30.
+4. Entrar como profesor1 y ver el tablero del turno.","Al finalizar el turno, quien abrió y no envió figura como 'No completó' (US9).",El sistema envía solo lo respondido a las 16:30 y el tablero muestra 'Enviado' con envío 4:30 p. m. No existe el estado 'No completó'.,,Decisión de equipo: se muestra 'Entregado por sistema' en lugar de 'No completó' (4555444)
+BUG-006,13-10-2026,QA 8,Sprint 2,TC-114,Se puede crear una calse con el mismo nombre que otra cambiando mayusuclas ,"1. Ir a /dev/clases/nueva.
+2. Nombre 'matemáticas', Lunes, Turno mañana.
+3. Elegir profesor1 y alumno1.
+4. Crear clase.",No guarda y muestra error de nombre duplicado (US3).,Se crea una segunda clase 'matemáticas' sin ningún aviso. Quedó creada en el ambiente y no se pudo borrar (no hay botón eliminar).,,Corregido en e93b130 (borrar clases queda fuera de alcance)
+BUG-007,13-10-2026,QA 8,Sprint 2,,La contraseña pide minimo 6 caracteres y no 8,"1. Ir a /registro.
+2. Completar nombre, usuario y mail válidos.
+3. Contraseña de 7 caracteres.
+4. Presionar 'Crear cuenta'.",Mínimo de 8 caracteres (US1).,Con 7 caracteres el formulario acepta la contraseña. El mensaje del formulario vacío dice 'al menos 6 caracteres'.,,Corregido en 9f82b56
+BUG-008,13-10-2026,QA 8,Sprint 2,TC-058,El registro acepta un nombre solo fomrado por espacios ,"1. Ir a /registro.
+2. Nombre con solo espacios, usuario, mail y contraseña válidos.
+3. Presionar 'Crear cuenta'.","Trata el nombre como vacío, marca 'El nombre es obligatorio' y no crea la cuenta (US1).",Acepta el nombre y avanza.,,Ya corregido antes de esta ronda
+BUG-009,13-10-2026,QA 8,Sprint 2,TC-063,El registro acepta un mail ya registrado ,"1. Ir a /registro.
+2. Nombre, usuario y contraseña nuevos, y un mail ya usado.
+3. Presionar 'Crear cuenta'.",Muestra error de mail existente y no crea cuenta (0 cuentas duplicadas).,Acepta el registro y avanza sin error.,,Ya corregido antes de esta ronda; carrera de registros simultáneos cerrada en ecf2e89
+BUG-010,13-10-2026,QA 8,Sprint 2,TC-094,Se puede guardar un parcial con una consigna sin enunciado ,"1. Crear un parcial sin consignas.
+2. Presionar Editar.
+3. Dejar la consigna 'Texto' que aparece vacía.
+4. Guardar.",No guarda: la consigna necesita enunciado.,Se guarda el parcial con la consigna 1 sin texto.,,Corregido en 43668ad
+BUG-011,20-10-2026,QA 8,Sprint 2,TC-099,Se puede cambiar el tema de un parcial después de que un alumno lo entregó,"1. Entrar como profesor1 y abrir QA2-07.
+2. Presionar Editar.
+3. Cambiar el tema de Tema 2 a Tema 3.
+4. Guardar cambios.",No permite editar el tema (US2: solo mientras ningún alumno inició).,Guarda el cambio. El parcial muestra Tema 3 y la entrega de alumno3 sigue con Tema 2.,,Corregido en 9fdc667
+BUG-012,20-10-2026,QA 8,Sprint 2,TC-113,Se puede crear una clase con el mismo nombre exacto que otra,"1. Ir a /dev/clases/nueva.
+2. Nombre: el mismo de la clase existente. Día, turno, profesor y alumno cualquiera.
+3. Tocar 'Crear clase'.","No guarda y muestra el error (US3: ""El nombre de la clase no puede repetirse"").","Se crea una segunda clase con otro UUID y sin ningún mensaje. rendix_clases queda con 2 clases de igual nombre y /dev muestra 2 tarjetas idénticas. En el código, validateClase no controla que el nombre sea único.",,Corregido en e93b130
+BUG-013,20-10-2026,QA 8,Sprint 2,TC-077,"Un nombre de alumno largo y sin espacios desborda el encabezado y saca ""Cerrar sesión"" de la vista","1. Registrarse con Nombre = 300 letras 'A' sin espacios y el resto de los datos válidos.
+2. Mirar el encabezado en 'Mis clases' (ventana de 1280 px).","El nombre se ajusta o se corta sin romper el diseño y ""Cerrar sesión"" queda visible. El largo máximo lo definen las PMs (S2-A2).","La página pasa a medir 3349 px de ancho, aparece scroll horizontal y ""Cerrar sesión"" queda en x = 3280 px, fuera de la ventana. El nombre se guarda completo.",,Corregido en 9f82b56 y e9c651d (máximo 30 caracteres)
+BUG-014,20-10-2026,QA 8,Sprint 2,TC-133,Al pasar a un alumno a otro turno del mismo parcial no hay aviso,"1. Abrir el tablero del turno tarde ('Alumnos y seguimiento').
+2. En 'Asignar alumnos', buscar 'alumno1', tildarlo y tocar 'Asignar'.","Un aviso que nombra el turno anterior (mañana) y el nuevo (tarde); el alumno queda en un solo turno activo (US4: ""el anterior se reemplaza y se avisa del cambio"").","alumno1 pasa al turno tarde y sale del turno mañana (queda en un solo turno, correcto), pero sin ningún aviso: no hay diálogo ni mensaje en pantalla. turnosStore.asignarAlumnos lo mueve en silencio.",,Corregido en b035207
+BUG-015,20-10-2026,QA 8,Sprint 2,TC-166,"Cambiando la hora del equipo, el alumno abre el parcial fuera de su horario","1. Como alumno1, abrir el parcial a las 08:00: muestra 'Todavía no empezó'.
+2. Adelantar el reloj del equipo 2 horas (10:00) y volver a abrir el parcial.
+3. Tocar 'Comenzar parcial'.",La validación usa la hora del servidor y el examen no abre.,"El examen abre, se registra la apertura y se ven las consignas. turnosStore.estadoTurno compara con Date.now() del navegador. Con el mismo método se podría abrir después del fin atrasando el reloj.",,Ya corregido antes de esta ronda (el servidor valida con su hora)
+BUG-016,20-10-2026,QA 8,Sprint 2,TC-209,Un alumno quitado del turno puede comenzar y entregar desde una pestaña que quedó abierta,"1. A las 08:59, alumno1 abre el parcial y deja la pestaña en 'Todavía no empezó'.
+2. Antes de las 09:00, profesor1 quita a alumno1 del turno ('Quitar'). Una pestaña nueva de alumno1 ya muestra 'Parcial no encontrado'.
+3. A las 09:00 la pestaña abierta muestra 'Comenzar parcial'. alumno1 comienza, responde y envía.",El envío se rechaza.,"La entrega se guarda en rendix_entregas_profesor1 y la apertura queda registrada en el turno, aunque alumno1 ya no está entre los asignados. StudentExamPage guarda el turno al cargar y no vuelve a verificar la asignación al comenzar ni al enviar.",,Ya corregido antes de esta ronda; carrera al inicio cerrada en ecf2e89
+BUG-017,20-10-2026,QA 8,Sprint 2,TC-205,Una entrega confirmada en pantalla se pierde si el navegador se cierra de golpe,"1. Tocar 'Enviar parcial' y Aceptar.
+2. Apenas la pantalla muestra 'Entregado', matar el navegador (SIGKILL; equivale a un crash o corte de luz).
+3. Reabrir el navegador e ingresar como alumno2.","Estado consistente: si la pantalla confirmó el envío, la entrega existe.","El parcial vuelve a estar en curso con el borrador y sin entrega guardada. El alumno había visto ""Entregado"". Chromium escribe localStorage a disco con unos segundos de demora. El estado queda consistente (sin datos a medias).",,Ya corregido antes de esta ronda ('Entregado' solo tras confirmar el servidor)
+BUG-018,20-10-2026,QA 8,Sprint 2,TC-088,Un parcial sin consignas se puede publicar y el alumno lo puede enviar,"1. /documentos/nuevo: Matemáticas, título, Tema 1, lun 26/10/2026 08:00.
+2. Eliminar el único apartado y tocar 'Crear'. Se guarda y muestra '(Sin consignas)'.
+3. Tocar 'Publicar parcial' y Aceptar.
+4. Como alumno1, a las 08:05, abrir el parcial, tocar 'Comenzar parcial' y después 'Enviar parcial'.","No guarda o impide publicar (Sprint 1 US4: ""No se puede publicar sin enunciado ni consigna; se muestra el motivo""; Sprint 2 US2: cada tema necesita consignas).","Se publica sin aviso. El alumno ve ""El parcial tiene 0 apartados."", al comenzar ve ""(Sin consignas)"" y puede enviarlo: queda ""Entregado"".",,Corregido en 43668ad
+BUG-019,27-10-2026,QA 8,Sprint 3,"TC-254, TC-255, TC-256","El tiempo del examen, la apertura, el fin del turno y el borrador dependen del navegador del alumno (reloj y localStorage editables)","1. Vía reloj: adelantar el reloj del equipo 1 h (TC-254) o atrasarlo 1 h (TC-255).
+2. Vía storage: en localStorage editar rendix_turnos_profesor1 > aperturas.alumno1 (TC-256) o el horaFin del turno a 11:00.
+3. Vía borrador vencido (exploración): con el parcial de 30 min (08:00 a 08:30), cerrar la pestaña, pasar el fin, editar rendix_respuestas_alumno1_<parcial> y reingresar a las 09:15.","El tiempo restante sale de una hora oficial: un cambio de hora local se corrige en ≤ 1 s, la apertura y el fin del turno no se pueden editar desde el cliente, y lo entregado después del fin es lo respondido dentro del horario.","Adelantar 1 h: ""1:30:00"" pasa a ""29:59"", sin corrección. Atrasar 1 h: ""10:00"" pasa a ""1:10:00"" y el examen vence 1 h tarde. La apertura editada queda guardada y el profesor la ve falsificada (9:30 en lugar de 8:30). Editando el horaFin del turno el alumno gana tiempo (""2:30:00""). Borrador editado a las 09:15 (fin 08:30): al reingresar se entrega el texto editado como 'Enviado por tiempo', con fecha 09:15 y 'Tiempo usado: 30 min' (topeado a la duración), así que solo la hora de entrega delata el cambio.",,Ya corregido en su mayor parte antes de esta ronda; 1b9b21a: el servidor decide si la entrega fue 'por tiempo'
+BUG-020,27-10-2026,QA 8,Sprint 3,TC-325,Un alumno quitado del turno puede comenzar y entregar desde una pestaña que quedó abierta,"1. A las 08:59, alumno1 abre el parcial y deja la pestaña en 'Todavía no empezó'.
+2. profesor1 quita a alumno1 del turno.
+3. A las 09:00:30, en esa pestaña, alumno1 comienza, responde y envía.",El envío se rechaza.,"Aparece 'Comenzar parcial' y la entrega se guarda (fechaEntrega 09:00:30, 'Respuesta de un alumno quitado del turno').",,Ya corregido antes de esta ronda (igual que BUG-016)
+BUG-021,27-10-2026,QA 8,Sprint 3,"TC-277, TC-278",Un cierre abrupto del navegador pierde lo último escrito (borrador) o enviado (entrega confirmada),"1. Escribir 300 caracteres en la consigna.
+2. Esperar 1 s (TC-277) o no esperar (TC-278).
+3. Matar el navegador con pkill -9.
+4. Reabrir el mismo perfil e ingresar como alumno1.",Se recupera el texto completo (0 pérdidas).,"El examen sigue en curso pero la consigna está vacía: se pierden los 300 caracteres, en los dos casos y en los dos intentos. Con un cierre normal no se pierde nada (TC-284).",,Ya corregido antes de esta ronda (autoguardado en el servidor)
+BUG-022,27-10-2026,QA 8,Sprint 3,TC-279,"Con el almacenamiento del navegador lleno, lo que escribe el alumno se pierde sin ningún aviso","1. Seguir escribiendo en la consigna.
+2. Esperar 1 s.
+3. Recargar la página.","La app avisa que no puede guardar, no pierde lo ya guardado y no se rompe.",La pantalla muestra lo nuevo pero el borrador queda con lo anterior. No hay aviso ni error de JavaScript y 'Enviar parcial' sigue habilitado. Al recargar vuelve solo 'Respuesta guardada antes de llenar el almacenamiento.': lo escrito con el almacenamiento lleno se perdió.,,Corregido en 9475ae2
+BUG-024,,,,,,,,,,
+BUG-025,,,,,,,,,,
+BUG-026,,,,,,,,,,
+BUG-027,,,,,,,,,,
+BUG-028,,,,,,,,,,
+BUG-029,,,,,,,,,,
+BUG-030,,,,,,,,,,
+BUG-031,,,,,,,,,,
+BUG-032,,,,,,,,,,
+BUG-033,,,,,,,,,,
+BUG-034,,,,,,,,,,
+BUG-035,,,,,,,,,,
+BUG-036,,,,,,,,,,
+BUG-037,,,,,,,,,,
+BUG-038,,,,,,,,,,
+BUG-039,,,,,,,,,,
+BUG-040,,,,,,,,,,
+BUG-041,,,,,,,,,,
+BUG-042,,,,,,,,,,
+BUG-043,,,,,,,,,,
+BUG-044,,,,,,,,,,
+BUG-045,,,,,,,,,,

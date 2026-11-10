@@ -8,7 +8,7 @@ import DocumentBlocksView from '../components/DocumentBlocksView.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
 import TomarAhoraButton from '../components/TomarAhoraButton.jsx'
-import { getBlocks } from '../documentBlocks.js'
+import { getBlocks, motivoNoPublicable } from '../documentBlocks.js'
 import { getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { getSubmissionsFor } from '../submissionsStore.js'
 import { alumnosLabel, estadoTurno, formatHorario, getTurnosFor } from '../turnosStore.js'
@@ -32,6 +32,7 @@ export default function DocumentDetailPage() {
   const turnos = getTurnosFor(doc.id)
   // Publicar solo tiene sentido si queda algún turno por empezar.
   const hayTurnoFuturo = turnos.some((t) => estadoTurno(t) === 'proximo')
+  const sinConsignas = motivoNoPublicable(doc)
 
   async function handleDelete() {
     if (!window.confirm(`¿Eliminar "${doc.titulo}"?${avisoBorrado(doc.id)}`)) return
@@ -141,14 +142,15 @@ export default function DocumentDetailPage() {
           <div>
             <strong>¿Está listo?</strong>
             <p className="muted small">
-              {hayTurnoFuturo
-                ? 'Los alumnos de la clase lo van a ver a partir de que lo publiques.'
-                : 'Para publicarlo, asignale un turno que todavía no haya empezado.'}
+              {sinConsignas
+                ?? (hayTurnoFuturo
+                  ? 'Los alumnos de la clase lo van a ver a partir de que lo publiques.'
+                  : 'Para publicarlo, asignale un turno que todavía no haya empezado.')}
             </p>
           </div>
           <div className="actions">
             <TomarAhoraButton doc={doc} onTomado={handleTomado} />
-            <button type="button" onClick={handlePublish} disabled={!hayTurnoFuturo}>Publicar parcial</button>
+            <button type="button" onClick={handlePublish} disabled={!hayTurnoFuturo || Boolean(sinConsignas)}>Publicar parcial</button>
           </div>
         </div>
       )}

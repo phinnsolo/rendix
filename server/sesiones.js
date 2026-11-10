@@ -153,7 +153,8 @@ export async function entregar(client, s, { body, ahora, actor }) {
   const { enTiempo, respuestas, seq } = respuestasFinales(s, body, ahora)
   const hacia = enTiempo ? SESION.ENTREGADO : SESION.ENTREGADO_SISTEMA
   assertTransicion(s.estado, hacia)
-  const automatico = Boolean(body.automatico)
+  // El cliente avisa que su cuenta regresiva llegó a cero; solo cuenta si para el servidor el tiempo también se terminó.
+  const automatico = Boolean(body.automatico) && ahora.getTime() >= s.deadline.getTime() - TOLERANCIA_MS
   const fechaEntrega = new Date(Math.min(ahora.getTime(), s.deadline.getTime()))
   await crearEntrega(client, s, { respuestas, porTiempo: enTiempo && automatico, porSistema: !enTiempo, fechaEntrega })
   await client.query(
