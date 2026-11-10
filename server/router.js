@@ -16,7 +16,7 @@ import { EVENTOS, SESION, UMBRAL_LATIDO_MS, esSenal } from '../src/estadoExamen.
 import { TEMAS } from '../src/config.js'
 import { validateClase } from '../src/clases.js'
 import { validateRegistro } from '../src/registro.js'
-import { BLOCK_TYPES, motivoNoPublicable, textFromBlocks, validateBlocks } from '../src/documentBlocks.js'
+import { BLOCK_TYPES, CODE_LANGUAGES, motivoNoPublicable, textFromBlocks, validateBlocks } from '../src/documentBlocks.js'
 import { getDuracion, getHerramientas, isValidDuracion, validateTitulo } from '../src/examSettings.js'
 import {
   aplicarAsignacion, aplicarBorrarVacios, aplicarCambioAlumnos, aplicarHorarios, aplicarQuitarAlumno, estadoTurno, hasStarted,
@@ -71,6 +71,17 @@ function validacion(errores) {
 
 const esTexto = (v, max = 10_000) => typeof v === 'string' && v.length <= max
 const esObjeto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+
+// Forma de un apartado según su tipo (ver src/documentBlocks.js). Lo que no la cumple se rechaza con 400 antes de
+// que las reglas lo lean.
+function bloqueBienFormado(b) {
+  if (!esObjeto(b) || !BLOCK_TYPES[b.tipo] || typeof b.id !== 'string' || typeof b.consigna !== 'string') return false
+  if (b.tipo === 'texto') return typeof b.contenido === 'string'
+  if (b.tipo === 'codigo') return typeof b.contenido === 'string' && (b.lenguaje === undefined || Boolean(CODE_LANGUAGES[b.lenguaje]))
+  if (b.tipo === 'geogebra') return b.ggbBase64 == null || typeof b.ggbBase64 === 'string'
+  return Array.isArray(b.opciones) &&
+    b.opciones.every((o) => esObjeto(o) && typeof o.id === 'string' && typeof o.texto === 'string' && typeof o.correcta === 'boolean')
+}
 
 // --- Cuentas
 
@@ -255,7 +266,7 @@ async function validarDocumento(client, body, profesor) {
   if (!TEMAS.includes(body.tema)) throw new HttpError(400, 'Elegí un tema.')
   if (!isValidDuracion(body.duracion)) throw new HttpError(400, 'La duración no es válida.')
   const bloques = body.bloques
-  if (!Array.isArray(bloques) || bloques.some((b) => !esObjeto(b) || !BLOCK_TYPES[b.tipo] || typeof b.id !== 'string')) {
+  if (!Array.isArray(bloques) || !bloques.every(bloqueBienFormado)) {
     throw new HttpError(400, 'Los apartados no son válidos.')
   }
   const errorBloques = validateBlocks(bloques)

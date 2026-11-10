@@ -243,3 +243,19 @@ describe('BUG-014: pasar a un alumno a otro turno del mismo parcial avisa del ca
     assert.deepEqual(rows.map((r) => r.id), [`${id}-b`])
   })
 })
+
+describe('bloques mal formados: 400, no 500', () => {
+  test('un bloque sin los campos de su tipo se rechaza con 400', async () => {
+    const { parcialId } = await e.parcialEnCurso()
+    for (const bloque of [
+      { id: 'b1', tipo: 'texto', consigna: 'Sin contenido' },
+      { id: 'b1', tipo: 'codigo', consigna: 'Lenguaje inexistente', lenguaje: 'cobol', contenido: '' },
+      { id: 'b1', tipo: 'opcion-multiple', consigna: 'Sin opciones' },
+      { id: 'b1', tipo: 'opcion-multiple', consigna: 'Opción rota', opciones: [{ id: 'o1' }, { id: 'o2', texto: 'b', correcta: true }] },
+      { id: 'b1', tipo: 'texto', consigna: 42, contenido: '' },
+    ]) {
+      const { status } = await editar(parcialId, { titulo: 'Otro', bloques: [bloque] })
+      assert.equal(status, 400, JSON.stringify(bloque))
+    }
+  })
+})
