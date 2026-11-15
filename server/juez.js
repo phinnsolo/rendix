@@ -1,12 +1,15 @@
-// Agente juez de IA: corrige UNA pregunta de una entrega con la API de Claude (SDK oficial @anthropic-ai/sdk).
+// Agente juez de IA: corrige UNA pregunta de una entrega con la API de Google Gemini (REST generateContent) o con la
+// API de Claude (SDK oficial @anthropic-ai/sdk).
 // Cada llamada es independiente (un juez por pregunta, sin contexto compartido entre jueces) y recibe solamente la
 // consigna, la respuesta, los criterios con sus pesos y el puntaje máximo: nunca el nombre, usuario, mail ni otro dato
 // del alumno. La salida es JSON con esquema (salida estructurada) y se valida otra vez en correccion.js.
 //
 // Variables de entorno (solo servidor, nunca llegan al frontend):
-//   ANTHROPIC_API_KEY   clave de la API de Claude (obligatoria para corregir con IA)
-//   RENDIX_IA_MODELO    modelo (por defecto claude-opus-5-5)
-//   RENDIX_IA_FALLBACK  "0" desactiva el modelo de respaldo del servidor ante un rechazo (por defecto activado)
+//   RENDIX_IA_PROVEEDOR "gemini" o "claude". Por defecto: gemini si hay GEMINI_API_KEY, si no claude.
+//   GEMINI_API_KEY      clave de la API de Gemini (Google AI Studio)
+//   ANTHROPIC_API_KEY   clave de la API de Claude
+//   RENDIX_IA_MODELO    modelo (por defecto gemini-3.5-flash-lite con Gemini, claude-opus-5-5 con Claude)
+//   RENDIX_IA_FALLBACK  solo Claude: "0" desactiva el modelo de respaldo del servidor ante un rechazo (por defecto activado)
 import Anthropic from '@anthropic-ai/sdk'
 import { ESQUEMA_JUEZ, validarResultadoJuez } from '../src/correccion.js'
 import { CODE_LANGUAGES } from '../src/documentBlocks.js'
@@ -87,4 +90,49 @@ export async function juezClaude({ block, respuesta, criterios, puntajeMax }) {
   }
   const resultado = validarResultadoJuez(salida, { criterios, puntajeMax })
   return { ...resultado, juez: { modelo: respuestaApi.model, version: VERSION_PROMPT } }
+}
+
+const MODELO_GEMINI_POR_DEFECTO = 'gemini-3.5-flash-lite'
+
+// Mismo contrato que juezClaude, con la API REST de Gemini (sin SDK: un fetch). GEMINI_BASE_URL solo para pruebas.
+export async function juezGemini({ block, respuesta, criterios, puntajeMax }) {
+  const clave = process.env.GEMINI_API_KEY
+  if (!clave) throw new JuezSinConfigurar('Falta la variable de entorno GEMINI_API_KEY: la corrección automática no está configurada.')
+  const modelo = process.env.RENDIX_IA_MODELO || MODELO_GEMINI_POR_DEFECTO
+  const base = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com'
+  const res = await fetch(`${base}/v1beta/models/${encodeURIComponent(modelo)}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SISTEMA }] },
+      contents: [{ role: 'user', parts: [{ text: armarPedido({ block, respuesta, criterios, puntajeMax }) }] }],
+      generationConfig: { responseMimeType: 'application/json', responseJsonSchema: ESQUEMA_JUEZ, maxOutputTokens: 16000 },
+    }),
+    signal: AbortSignal.timeout(TIMEOUT_JUEZ_MS),
+  })
+  const datos = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${datos?.error?.message ?? res.statusText}`)
+  if (datos?.promptFeedback?.blockReason) throw new Error(`Gemini bloqueó el pedido (${datos.promptFeedback.blockReason}).`)
+  const candidato = datos?.candidates?.[0]
+  if (candidato?.finishReason === 'MAX_TOKENS') throw new Error('La respuesta del modelo quedó cortada (MAX_TOKENS).')
+  if (candidato?.finishReason !== 'STOP') throw new Error(`Gemini no terminó la respuesta (${candidato?.finishReason ?? 'sin candidato'}).`)
+  // Las partes con thought: true son razonamiento, no la respuesta.
+  const texto = (candidato.content?.parts ?? []).filter((p) => !p.thought && typeof p.text === 'string').map((p) => p.text).join('')
+  let salida
+  try {
+    salida = JSON.parse(texto)
+  } catch {
+    throw new Error('El modelo no devolvió JSON válido.')
+  }
+  const resultado = validarResultadoJuez(salida, { criterios, puntajeMax })
+  return { ...resultado, juez: { modelo: datos.modelVersion || modelo, version: VERSION_PROMPT } }
+}
+
+export function proveedorIA() {
+  return process.env.RENDIX_IA_PROVEEDOR || (process.env.GEMINI_API_KEY ? 'gemini' : 'claude')
+}
+
+// Juez que usa la aplicación: elige el proveedor en cada llamada (las variables pueden cambiar sin reiniciar en pruebas).
+export function juezIA(entrada) {
+  return proveedorIA() === 'gemini' ? juezGemini(entrada) : juezClaude(entrada)
 }

@@ -11,7 +11,7 @@
 
 import { HttpError } from './http.js'
 import { query, tx } from './db.js'
-import { JuezSinConfigurar, VERSION_PROMPT, juezClaude } from './juez.js'
+import { JuezSinConfigurar, VERSION_PROMPT, juezIA } from './juez.js'
 import { getBlocks } from '../src/documentBlocks.js'
 import {
   FEEDBACK_MAXIMO, INTENTOS_MAXIMOS, ResultadoInvalido, calcularNota, criteriosDe, modoEvaluacion, pendientesDePublicar,
@@ -24,7 +24,7 @@ export const VENCIMIENTO_TOMA_MS = 3 * 60_000
 export const ESPERAS_REINTENTO_MS = [5_000, 20_000]
 const ESPERA_SIN_CONFIGURAR_MS = 60_000
 
-const config = { juez: juezClaude, automatica: true, esperasMs: ESPERAS_REINTENTO_MS }
+const config = { juez: juezIA, automatica: true, esperasMs: ESPERAS_REINTENTO_MS }
 
 // Solo para pruebas: reemplaza el juez (mock) o desactiva el disparo automático para llamar a procesarCola a mano.
 export function configurarCorreccion(cambios) {

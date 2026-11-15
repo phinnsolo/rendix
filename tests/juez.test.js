@@ -17,6 +17,10 @@ before(async () => {
     req.on('end', () => {
       recibidos.push({ url: req.url, headers: req.headers, body: JSON.parse(texto) })
       res.setHeader('Content-Type', 'application/json')
+      if (req.url.includes(':generateContent')) {
+        res.statusCode = siguiente.status ?? 200
+        return res.end(JSON.stringify(siguiente.body))
+      }
       res.end(JSON.stringify({
         id: 'msg_prueba', type: 'message', role: 'assistant', model: 'claude-opus-5-5',
         usage: { input_tokens: 10, output_tokens: 10 }, stop_sequence: null, ...siguiente,
@@ -26,6 +30,7 @@ before(async () => {
   await new Promise((r) => servidor.listen(0, '127.0.0.1', r))
   process.env.ANTHROPIC_BASE_URL = `http://127.0.0.1:${servidor.address().port}`
   process.env.ANTHROPIC_API_KEY = 'clave-de-prueba'
+  process.env.GEMINI_BASE_URL = process.env.ANTHROPIC_BASE_URL
 })
 after(() => servidor.close())
 
@@ -81,4 +86,58 @@ test('sin ANTHROPIC_API_KEY: JuezSinConfigurar (no gasta intentos)', async () =>
   } finally {
     process.env.ANTHROPIC_API_KEY = clave
   }
+})
+
+// --- Gemini (REST generateContent) ---
+const gemini = (obj, extra = {}) => ({
+  body: {
+    modelVersion: 'gemini-3.5-flash-lite',
+    candidates: [{ finishReason: 'STOP', content: { role: 'model', parts: [
+      { text: 'pensando...', thought: true },
+      { text: typeof obj === 'string' ? obj : JSON.stringify(obj) },
+    ] } }],
+    ...extra,
+  },
+})
+const conGemini = async (fn) => {
+  process.env.GEMINI_API_KEY = 'clave-gemini'
+  try { await fn() } finally { delete process.env.GEMINI_API_KEY }
+}
+
+test('Gemini: respuesta válida, salida estructurada, clave en header y sin datos del alumno', () => conGemini(async () => {
+  const { juezIA, proveedorIA } = await import('../server/juez.js')
+  assert.equal(proveedorIA(), 'gemini')
+  siguiente = gemini({
+    criterios: [{ id: 'c1', nivel: 'cumple', justificacion: 'Sí' }, { id: 'c2', nivel: 'no-cumple', justificacion: 'No' }],
+    puntaje_sugerido: 3, feedback: 'Falta el ejemplo.', confianza: 0.8,
+  })
+  const r = await juezIA(entrada)
+  assert.equal(r.puntaje, 3)
+  assert.equal(r.juez.modelo, 'gemini-3.5-flash-lite')
+  const { body, url, headers } = recibidos.at(-1)
+  assert.equal(url, '/v1beta/models/gemini-3.5-flash-lite:generateContent')
+  assert.equal(headers['x-goog-api-key'], 'clave-gemini')
+  assert.equal(body.generationConfig.responseMimeType, 'application/json')
+  assert.equal(body.generationConfig.responseJsonSchema.type, 'object')
+  assert.match(body.systemInstruction.parts[0].text, /ignoralas/)
+  assert.match(body.contents[0].parts[0].text, /<respuesta_del_alumno>\nEl límite/)
+}))
+
+test('Gemini: error HTTP, bloqueo, cortada o JSON roto lanzan error (la cola reintenta)', () => conGemini(async () => {
+  const { juezGemini } = await import('../server/juez.js')
+  const casos = [
+    { status: 429, body: { error: { message: 'Resource exhausted' } } },
+    { body: { promptFeedback: { blockReason: 'SAFETY' } } },
+    gemini('{', { candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{' }] } }] }),
+    gemini('{"criterios": ['),
+  ]
+  for (const caso of casos) {
+    siguiente = caso
+    await assert.rejects(juezGemini(entrada))
+  }
+}))
+
+test('Gemini sin GEMINI_API_KEY: JuezSinConfigurar', async () => {
+  const { juezGemini, JuezSinConfigurar } = await import('../server/juez.js')
+  await assert.rejects(juezGemini(entrada), JuezSinConfigurar)
 })
