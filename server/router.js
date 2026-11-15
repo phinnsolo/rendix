@@ -457,20 +457,24 @@ ruta('GET', '/api/turnos/:id/seguimiento', 'profesor', async ({ params, sesion }
   return { alumnos: await filasSeguimiento(turno) }
 })
 
-// Monitoreo: los turnos del profesor que se están tomando ahora, con el seguimiento de cada uno. También los que ya
-// terminaron pero tienen un examen en Incidente o reanudado (el tiempo de esos alumnos sigue después del turno).
+// Monitoreo: los turnos del profesor que se están tomando ahora, con el seguimiento de cada uno. También los que
+// terminaron hace menos de MONITOREO_VENTANA_MS y tienen un examen en Incidente o reanudado (el tiempo de esos alumnos
+// sigue después del turno). Los más viejos no aparecen: se revisan desde el detalle del turno. Arriba, los que están
+// en curso; dentro de cada grupo, el que empezó más recientemente.
+export const MONITOREO_VENTANA_MS = 24 * 60 * 60_000
 ruta('GET', '/api/monitoreo', 'profesor', async ({ sesion }) => {
-  await tx((c) => normalizarSesiones(c, 's.turno_id in (select id from turnos where profesor = $1)', sesion.username))
   const ahora = new Date()
+  const desde = new Date(ahora.getTime() - MONITOREO_VENTANA_MS)
+  await tx((c) => normalizarSesiones(c, 's.turno_id in (select id from turnos where profesor = $1)', sesion.username))
   const { rows } = await query(
     `select t.*, d.titulo from turnos t join documentos d on d.id = t.parcial_id
      where t.profesor = $1 and t.inicio <= $2 and (
-       t.fin > $2 or exists (
+       t.fin > $2 or (t.fin > $3 and exists (
          select 1 from sesiones_examen s where s.turno_id = t.id
            and (s.estado = 'incidente' or (s.estado = 'en-curso' and (s.reingreso_pendiente or s.deadline > $2)))
-       )
-     ) order by t.fin`,
-    [sesion.username, ahora]
+       ))
+     ) order by (t.fin > $2) desc, t.inicio desc`,
+    [sesion.username, ahora, desde]
   )
   return {
     turnos: await Promise.all(

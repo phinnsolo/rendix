@@ -395,6 +395,27 @@ describe('panel del profesor (US6)', () => {
     assert.equal((await estadoEnMonitoreo(turnoId, 'alumno1')).sesion.estado, 'incidente')
   })
 
+  test('el monitoreo no muestra un turno terminado hace más de un día, aunque tenga un Incidente', async () => {
+    const { parcialId, turnoId } = await e.parcialEnCurso()
+    await comenzar(parcialId, e.tokens.alumno1)
+    await incidente(parcialId, e.tokens.alumno1, 'FULLSCREEN_EXIT')
+    await e.pool.query("update turnos set inicio = now() - interval '2 days', fin = now() - interval '2 days' + interval '2 hours' where id = $1", [turnoId])
+    assert.equal(await estadoEnMonitoreo(turnoId, 'alumno1'), undefined)
+  })
+
+  test('el monitoreo muestra arriba los turnos en curso, del más reciente al más viejo', async () => {
+    const viejo = await e.parcialEnCurso()
+    const nuevo = await e.parcialEnCurso()
+    await e.pool.query("update turnos set inicio = inicio - interval '30 minutes' where id = $1", [viejo.turnoId])
+    const { body } = await e.api('GET', '/api/monitoreo', { token: e.tokens.profesor1 })
+    const ids = body.turnos.map((t) => t.id)
+    assert.ok(ids.indexOf(nuevo.turnoId) < ids.indexOf(viejo.turnoId))
+    const ahora = Date.now()
+    const claves = body.turnos.map((t) => [new Date(t.fin).getTime() > ahora ? 0 : 1, -new Date(t.inicio).getTime()])
+    const ordenadas = [...claves].sort((a, b) => a[0] - b[0] || a[1] - b[1])
+    assert.deepEqual(claves, ordenadas)
+  })
+
   test('autoguardado: cambios fuera de orden se descartan y los nuevos se guardan', async () => {
     const { parcialId } = await e.parcialEnCurso()
     await comenzar(parcialId, e.tokens.alumno3)
