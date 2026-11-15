@@ -11,6 +11,7 @@ import { SEGUIMIENTO_MS, detalleEstado, estadoAlumno } from '../seguimiento.js'
 import { usePolling } from '../usePolling.js'
 import AlumnoActividad, { BotonReanudar, EstadoChip } from '../components/AlumnoActividad.jsx'
 import NotFound from '../components/NotFound.jsx'
+import CorreccionTurno from '../components/CorreccionTurno.jsx'
 import BackLink from '../components/BackLink.jsx'
 
 const ESTADO_TURNO = {
@@ -162,6 +163,7 @@ export default function TurnoDetailPage() {
           </div>
         )}
       </section>
+      {estado !== 'proximo' && <CorreccionTurno turno={turno} estadoDelTurno={estado} />}
       {detalle && (
         <AlumnoActividad key={detalle} turnoId={turno.id} username={detalle} onCerrar={() => setDetalle(null)} onCambio={refresh} />
       )}

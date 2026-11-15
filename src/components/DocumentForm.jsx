@@ -12,6 +12,8 @@ import DocumentBlock from './DocumentBlock.jsx'
 import BlockTypeSelector from './BlockTypeSelector.jsx'
 import TopicSelector from './TopicSelector.jsx'
 import AllowedToolsSelector from './AllowedToolsSelector.jsx'
+import { CampoNumero } from './CorreccionBloque.jsx'
+import { UMBRAL_POR_DEFECTO, validarUmbral } from '../correccion.js'
 
 function hasContent(block) {
   return (
@@ -52,6 +54,8 @@ export default function DocumentForm({
       ? initialHorarios.map((t) => ({ ...t, key: t.id, turno: t.turno ?? '', bloqueado: hasStarted(t) }))
       : [nuevoHorario(turnoClase)]
   )
+  // Confianza mínima de los agentes jueces (en %): por debajo, la respuesta queda marcada para revisión prioritaria.
+  const [umbral, setUmbral] = useState(() => Math.round((initialValues?.umbralConfianza ?? UMBRAL_POR_DEFECTO) * 100))
   const [erroresHorarios, setErroresHorarios] = useState([])
   // Si un turno ya empezó, cambiar la duración cambiaría un examen en curso.
   const duracionBloqueada = horarios.some((h) => h.bloqueado)
@@ -124,6 +128,11 @@ export default function DocumentForm({
       setError(blocksError)
       return
     }
+    const umbralConfianza = contenidoBloqueado ? (initialValues.umbralConfianza ?? UMBRAL_POR_DEFECTO) : umbral / 100
+    if (!Number.isInteger(umbral) || !validarUmbral(umbralConfianza)) {
+      setError('El umbral de confianza tiene que ser un número entero entre 0 y 100.')
+      return
+    }
     const saved = bloques.map((block) => {
       const api = geogebraApis.current.get(block.id)
       return api ? { ...block, ggbBase64: api.getBase64() } : block
@@ -137,6 +146,7 @@ export default function DocumentForm({
         herramientas,
         duracion: minutos,
         bloques: contenidoBloqueado ? initialValues.bloques : saved,
+        umbralConfianza,
         horarios: horarios
           .filter((h) => !h.bloqueado)
           .map(({ id, turno, fecha, horaInicio }) => ({ id, turno, fecha, horaInicio })),
@@ -191,12 +201,23 @@ export default function DocumentForm({
           turnoPorDefecto={turnoClase}
         />
         <AllowedToolsSelector value={herramientas} onChange={setHerramientas} />
+        <label>
+          Umbral de confianza de la corrección automática
+          <span className="umbral-field">
+            <CampoNumero className="duration-input" label="Umbral de confianza en porcentaje" value={umbral} onChange={setUmbral} disabled={contenidoBloqueado} />
+            <span className="muted">%</span>
+          </span>
+          <span className="muted hint">
+            Si un agente juez informa una confianza menor, la respuesta queda marcada como “Baja confianza” para que la revises primero.
+            Es un indicador del modelo, no una probabilidad calibrada.
+          </span>
+        </label>
       </form>
 
       <div className="blocks">
         <span className="blocks-label">Consignas</span>
         {contenidoBloqueado && (
-          <p className="notice muted">El tema y las consignas no se pueden cambiar: un alumno ya empezó el parcial.</p>
+          <p className="notice muted">El tema, las consignas, los puntajes y los criterios de corrección no se pueden cambiar: un alumno ya empezó el parcial.</p>
         )}
         {!contenidoBloqueado && bloques.map((block, index) => (
           <DocumentBlock

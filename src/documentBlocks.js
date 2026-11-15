@@ -5,6 +5,10 @@
 //   { id, tipo: 'codigo',          consigna, lenguaje, contenido } contenido: código inicial
 //   { id, tipo: 'geogebra',        consigna, ggbBase64 }           construcción inicial (null = vacía)
 //   { id, tipo: 'opcion-multiple', consigna, opciones: [{ id, texto, correcta }] }
+// Además, para la corrección automática (ver correccion.js): `puntaje` (máximo de la pregunta) y `criterios`
+// ([{ id, texto, peso }], salvo en Multiple Choice). Los apartados anteriores no los tienen y valen 1 punto.
+
+import { validarCorreccionBloque } from './correccion.js'
 
 export const BLOCK_TYPES = {
   texto: 'Texto',
@@ -26,12 +30,16 @@ export function createOption() {
   return { id: crypto.randomUUID(), texto: '', correcta: false }
 }
 
+export function createCriterio() {
+  return { id: crypto.randomUUID(), texto: '', peso: 1 }
+}
+
 export function createBlock(tipo) {
   const id = crypto.randomUUID()
-  if (tipo === 'geogebra') return { id, tipo, consigna: '', ggbBase64: null }
-  if (tipo === 'codigo') return { id, tipo, consigna: '', lenguaje: 'python', contenido: '' }
-  if (tipo === 'opcion-multiple') return { id, tipo, consigna: '', opciones: [createOption(), createOption()] }
-  return { id, tipo: 'texto', consigna: '', contenido: '' }
+  if (tipo === 'geogebra') return { id, tipo, consigna: '', ggbBase64: null, puntaje: 1, criterios: [] }
+  if (tipo === 'codigo') return { id, tipo, consigna: '', lenguaje: 'python', contenido: '', puntaje: 1, criterios: [] }
+  if (tipo === 'opcion-multiple') return { id, tipo, consigna: '', opciones: [createOption(), createOption()], puntaje: 1 }
+  return { id, tipo: 'texto', consigna: '', contenido: '', puntaje: 1, criterios: [] }
 }
 
 // Completa los campos que no existían en versiones anteriores. No modifica lo guardado:
@@ -56,6 +64,8 @@ export function getBlocks(doc) {
 export function validateBlocks(bloques) {
   for (const [index, block] of bloques.entries()) {
     if (!String(block.consigna ?? '').trim()) return `El apartado ${index + 1} necesita una consigna.`
+    const errorCorreccion = validarCorreccionBloque(block, index)
+    if (errorCorreccion) return errorCorreccion
     if (block.tipo !== 'opcion-multiple') continue
     const name = `El apartado ${index + 1} (Multiple Choice)`
     if (block.opciones.length < 2) return `${name} necesita al menos 2 opciones.`
@@ -90,9 +100,10 @@ export function textFromBlocks(bloques) {
     .join('\n\n')
 }
 
-// Apartados tal como los ve el alumno: sin marcar cuál es la opción correcta del multiple choice.
+// Apartados tal como los ve el alumno: sin marcar cuál es la opción correcta del multiple choice y sin los criterios
+// internos de corrección ni sus pesos (el puntaje máximo de cada pregunta sí lo ve).
 export function blocksParaAlumno(bloques) {
-  return bloques.map((block) =>
+  return bloques.map(({ criterios: _criterios, ...block }) =>
     block.tipo === 'opcion-multiple'
       ? { ...block, opciones: block.opciones.map(({ correcta: _correcta, ...opcion }) => opcion) }
       : block

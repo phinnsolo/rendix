@@ -75,13 +75,26 @@ Un alumno también puede **crear su cuenta** desde el login ("Crear cuenta"), co
 - El alumno tiene sus parciales separados en **A entregar** y **Entregados**; al abrir un parcial entregado ve la nota y la devolución del profesor.
 - La sesión es **por pestaña**: se puede tener al profesor en una pestaña y a un alumno en otra. Al abrir una pestaña nueva hay que volver a iniciar sesión.
 
+## Sprint final: corrección automática, revisión y publicación (RF11, RF12, RF13)
+
+- **Criterios y pesos**: cada apartado del parcial tiene un **puntaje** (su peso en la nota) y, salvo Multiple Choice, **criterios de corrección** con su peso relativo. El profesor también define el **umbral de confianza** del parcial. Los alumnos no ven los criterios.
+- **Corrección automática**: al entregar (a mano, por tiempo, por el sistema o con SALIR), en la misma transacción se encola una evaluación por pregunta (tabla `evaluaciones`, persistente: no hay tareas en memoria). Después de responder, un **agente juez** independiente por pregunta (API de Claude, `server/juez.js`) recibe solo la consigna, la respuesta, los criterios con pesos y el puntaje máximo, y devuelve JSON validado (criterios cumplidos/parciales/faltantes, puntaje sugerido, feedback y confianza). El puntaje sugerido sale de los criterios y sus pesos; la nota final es la suma de puntajes sobre el total, en escala 0 a 10.
+  - Respuesta vacía (o código inicial sin cambios): 0 puntos y **Requiere revisión**, sin llamar al modelo. Multiple Choice se corrige con la opción correcta. GeoGebra queda **pendiente de corrección manual**.
+  - Errores (timeout, falla del proveedor, JSON inválido, puntaje fuera de rango): **hasta 2 reintentos**; si siguen fallando, la pregunta queda en **Error** y pasa a corrección manual sin tocar la respuesta. Las demás preguntas siguen.
+  - Confianza menor al umbral: **Baja confianza** y alerta de revisión prioritaria (es un indicador del modelo, no una probabilidad calibrada).
+  - La cola la procesan, sin bloquear a los alumnos: el mismo pedido de entrega después de responder (`waitUntil` en Vercel), cada consulta del panel docente (como la normalización del Sprint 4) y, opcionalmente, un cron a `GET /api/correcciones/procesar` con `Authorization: Bearer $CRON_SECRET`.
+- **Revisión docente** (Entregas → Revisar, o el detalle del turno → **Corrección y notas**): respuestas originales, puntaje sugerido, criterios, feedback, confianza, errores de los jueces, alertas y los **incidentes del modo restringido**. El profesor ajusta puntaje y feedback (validados), la nota se recalcula al guardar y cada cambio queda en el **historial de auditoría** (`auditoria_calificaciones`, append-only: quién, valor anterior y nuevo, fecha). Con un intento iniciado o entregado, las consignas, pesos, criterios y umbral quedan bloqueados (validado en el servidor).
+- **Publicación**: individual (con confirmación; se rechaza si alguna pregunta no tiene puntaje y dice cuáles) o **masiva** por turno (publica las listas e informa las pendientes; no duplica).
+- **Alumno**: antes de la publicación solo ve **Entregado** o **En corrección** (la API no manda nota, feedback ni puntajes: `GET /api/entregas/:id/resultado` responde 403). Publicada, ve la nota final, el puntaje definitivo y el feedback aprobado de cada pregunta. Nunca recibe criterios, pesos, puntajes sugeridos reemplazados, confianza ni datos del juez; el resultado de otro alumno responde 403.
+- **Configuración**: `ANTHROPIC_API_KEY` (obligatoria para la corrección con IA; sin ella las preguntas quedan en cola y el panel lo avisa), opcionales `RENDIX_IA_MODELO`, `RENDIX_IA_FALLBACK` y `CRON_SECRET` (ver `.env.example`). Migración: `db/migrations/003_correccion_automatica.sql` (`npm run db:migrate`). Las entregas que el profesor ya había corregido a mano quedan publicadas con esa nota.
+
 ## Pruebas
 
 ```bash
 npm test
 ```
 
-Usan el runner de Node (`node:test`) y una base PostgreSQL en memoria ([PGlite](https://pglite.dev), dependencia de desarrollo): no hace falta una base real. Cubren la API del modo restringido (estados, permisos, idempotencia, latido, reanudación, trazabilidad), la detección en el navegador y la migración sobre datos existentes.
+Usan el runner de Node (`node:test`) y una base PostgreSQL en memoria ([PGlite](https://pglite.dev), dependencia de desarrollo): no hace falta una base real. Cubren la API del modo restringido (estados, permisos, idempotencia, latido, reanudación, trazabilidad), la detección en el navegador, la migración sobre datos existentes y la corrección automática del Sprint final (`tests/correccionAutomatica.api.test.js`: encolado, jueces independientes, vacías, límites, ponderación, reintentos, baja confianza, ajuste y auditoría, bloqueo de estructura, publicación individual y masiva, permisos del alumno y el flujo integral). En las pruebas el agente juez se reemplaza por un mock; la aplicación usa la API de Claude.
 
 ## Build / deploy
 
@@ -90,4 +103,4 @@ npm run build     # genera dist/
 npm run preview   # sirve el build localmente
 ```
 
-Desplegado en Vercel (preset Vite) en https://rendix.vercel.app. `vercel.json` manda `/api/*` a la función de la API y el resto de las rutas a `index.html`, para que funcione recargar en cualquier URL. Necesita las variables `DATABASE_URL` y `AUTH_SECRET`.
+Desplegado en Vercel (preset Vite) en https://rendix.vercel.app. `vercel.json` manda `/api/*` a la función de la API y el resto de las rutas a `index.html`, para que funcione recargar en cualquier URL. Necesita las variables `DATABASE_URL` y `AUTH_SECRET`, y `ANTHROPIC_API_KEY` para la corrección automática.

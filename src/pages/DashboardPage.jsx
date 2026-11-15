@@ -30,7 +30,7 @@ export default function DashboardPage() {
         <div className="card">
           <h2>Entregas</h2>
           <p className="muted">
-            {sinCorregir === 1 ? '1 entrega sin corregir.' : `${sinCorregir} entregas sin corregir.`}
+            {sinCorregir === 1 ? '1 entrega por revisar.' : `${sinCorregir} entregas por revisar.`}
           </p>
           <Link to="/entregas" className="button">Ir a entregas</Link>
         </div>

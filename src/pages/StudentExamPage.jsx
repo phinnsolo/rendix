@@ -17,6 +17,7 @@ import ExamBlocks from '../components/ExamBlocks.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
 import ExamToolsPanel from '../components/ExamToolsPanel.jsx'
 import NotFound from '../components/NotFound.jsx'
+import ResultadoAlumno from '../components/ResultadoAlumno.jsx'
 import BackLink from '../components/BackLink.jsx'
 import { ExamenInterrumpido, ReglasModoRestringido } from '../components/RestrictedMode.jsx'
 
@@ -492,39 +493,11 @@ function SubmittedExam({ entrega }) {
         {chip}
         {texto}
       </div>
-      <GradeCard correccion={entrega.correccion} />
+      <ResultadoAlumno entrega={entrega} />
       <ExamHeader tema={entrega.tema} herramientas={entrega.herramientas} duracion={entrega.duracion ?? null} />
       <div className="blocks">
         <ExamBlocks blocks={entrega.bloques} respuestas={entrega.respuestas} readOnly />
       </div>
     </>
-  )
-}
-
-// Nota y devolución que dejó el profesor (sin las marcas de correcta/incorrecta del multiple choice).
-function GradeCard({ correccion }) {
-  if (!correccion) {
-    return (
-      <div className="card grade-card pending">
-        <h2>Corrección</h2>
-        <p className="muted">Tu profesor todavía no corrigió este parcial.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="card grade-card">
-      <div className="grade-card-header">
-        <h2>Corrección</h2>
-        <span className="muted small">Corregido el {formatDate(correccion.fecha)}</span>
-      </div>
-      <p className="grade-value"><strong>{correccion.nota}</strong> <span className="muted">/ 10</span></p>
-      {correccion.comentario && (
-        <div className="grade-feedback">
-          <span className="block-answer-label">Devolución del profesor</span>
-          <div className="content">{correccion.comentario}</div>
-        </div>
-      )}
-    </div>
   )
 }

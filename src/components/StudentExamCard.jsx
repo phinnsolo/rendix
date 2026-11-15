@@ -4,6 +4,7 @@ import { HERRAMIENTAS } from '../config.js'
 import { formatDuracion, getDuracion, getHerramientas, getTema } from '../examSettings.js'
 import { formatDate } from '../formatDate.js'
 import { isGraded } from '../submissionsStore.js'
+import { ESTADO_ALUMNO_CORRECCION } from '../correccion.js'
 import { estadoTurno, formatHorario, getApertura } from '../turnosStore.js'
 
 // Tarjeta de un parcial del alumno: estado, turno, herramientas y el botón para abrirlo o ver la entrega.
@@ -18,9 +19,11 @@ export default function StudentExamCard({ turno, doc, entrega, profesor, claseId
 
   let chip
   if (entrega) {
-    chip = isGraded(entrega)
-      ? <span className="chip published">Nota: {entrega.correccion.nota}</span>
-      : <span className="chip">Sin corregir</span>
+    // Antes de que el profesor publique, solo el estado: ni nota ni resultados parciales.
+    const estado = ESTADO_ALUMNO_CORRECCION[entrega.estadoCorreccion] ?? ESTADO_ALUMNO_CORRECCION.entregado
+    chip = isGraded(entrega) && entrega.correccion
+      ? <span className="chip published">Nota: {String(entrega.correccion.nota).replace('.', ',')}</span>
+      : <span className={estado.className}>{estado.label}</span>
   } else if (vencido) chip = <span className="chip incorrect">No entregado</span>
   else chip = <span className={abierto ? 'chip pending' : 'chip'}>{abierto ? 'Abierto' : 'Pendiente'}</span>
 
@@ -45,7 +48,7 @@ export default function StudentExamCard({ turno, doc, entrega, profesor, claseId
       )}
       <div className="actions">
         <Link to={to} className={entrega || vencido ? 'button secondary' : 'button'}>
-          {entrega ? 'Ver entrega' : vencido ? 'Ver' : abierto ? 'Continuar' : 'Abrir'}
+          {entrega ? (isGraded(entrega) ? 'Ver nota' : 'Ver entrega') : vencido ? 'Ver' : abierto ? 'Continuar' : 'Abrir'}
         </Link>
       </div>
     </li>

@@ -7,11 +7,12 @@ import SubmissionChips from '../components/SubmissionChips.jsx'
 import BackLink from '../components/BackLink.jsx'
 
 const TABS = {
-  pendientes: { label: 'Sin corregir', vacio: 'No hay entregas sin corregir.' },
-  corregidas: { label: 'Corregidas', vacio: 'Todavía no corregiste ninguna entrega.' },
+  pendientes: { label: 'Por revisar', vacio: 'No hay entregas por revisar.' },
+  corregidas: { label: 'Publicadas', vacio: 'Todavía no publicaste ninguna nota.' },
 }
 
-// Todas las entregas de los parciales del profesor, separadas por estado de corrección.
+// Todas las entregas de los parciales del profesor, separadas en por revisar (corrección automática en curso o
+// evaluadas sin publicar) y publicadas.
 export default function SubmissionsPage() {
   const entregas = getAllSubmissions()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -53,7 +54,7 @@ export default function SubmissionsPage() {
                   </p>
                 </div>
                 <Link to={to} className={isGraded(entrega) ? 'button secondary' : 'button'}>
-                  {isGraded(entrega) ? 'Ver corrección' : 'Corregir'}
+                  {isGraded(entrega) ? 'Ver corrección' : 'Revisar'}
                 </Link>
               </li>
             )

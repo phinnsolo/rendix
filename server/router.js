@@ -12,7 +12,12 @@ import {
   claveCliente, entregar, fechaCliente, marcarIncidente, normalizarSesiones, reanudar, registrarEvento, reingresar,
   salirVoluntariamente, senalesCliente,
 } from './sesiones.js'
+import {
+  aEvaluacion, auditoriaDe, evaluacionesDe, procesarCola, programarCorreccion, publicarEntrega, publicarTurno, reevaluar,
+  resultadoParaAlumno, resumenesDe, revisarEvaluacion,
+} from './correccion.js'
 import { EVENTOS, SESION, UMBRAL_LATIDO_MS, esSenal } from '../src/estadoExamen.js'
+import { UMBRAL_POR_DEFECTO, validarUmbral } from '../src/correccion.js'
 import { TEMAS } from '../src/config.js'
 import { validateClase } from '../src/clases.js'
 import { validateRegistro } from '../src/registro.js'
@@ -44,8 +49,11 @@ export async function handle(req, res) {
       if (match.rol !== '*' && sesion.rol !== match.rol) throw new HttpError(403, 'No tenés permiso para esto.')
     }
     const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await leerBody(req)
-    const resultado = await match.handler({ params, body, sesion, query: url.searchParams })
+    const resultado = await match.handler({ params, body, sesion, query: url.searchParams, headers: req.headers })
     enviar(res, 200, resultado ?? {})
+    // Si este pedido encoló correcciones (una entrega), los jueces arrancan después de responder: la entrega no espera
+    // a la IA.
+    programarCorreccion()
   } catch (e) {
     if (e instanceof HttpError) return enviar(res, e.status, { error: e.message, ...e.extra })
     logError(req, e)
@@ -76,6 +84,10 @@ const esObjeto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 // que las reglas lo lean.
 function bloqueBienFormado(b) {
   if (!esObjeto(b) || !BLOCK_TYPES[b.tipo] || typeof b.id !== 'string' || typeof b.consigna !== 'string') return false
+  // Corrección automática: puntaje máximo y criterios con peso (los rangos los valida validateBlocks).
+  if (b.puntaje !== undefined && typeof b.puntaje !== 'number') return false
+  if (b.criterios !== undefined && !(Array.isArray(b.criterios) &&
+    b.criterios.every((c) => esObjeto(c) && typeof c.id === 'string' && typeof c.texto === 'string' && typeof c.peso === 'number'))) return false
   if (b.tipo === 'texto') return typeof b.contenido === 'string'
   if (b.tipo === 'codigo') return typeof b.contenido === 'string' && (b.lenguaje === undefined || Boolean(CODE_LANGUAGES[b.lenguaje]))
   if (b.tipo === 'geogebra') return b.ggbBase64 == null || typeof b.ggbBase64 === 'string'
@@ -143,12 +155,17 @@ ruta('GET', '/api/datos', '*', async ({ sesion }) => {
       query('select * from entregas where profesor = $1', [yo]),
     ])
     const aperturas = await aperturasDe({ query }, turnos.rows.map((t) => t.id))
+    const resumenes = await resumenesDe({ query }, entregas.rows.map((e) => e.id))
+    // Si quedaron correcciones en cola (reintentos, o una instancia que se cortó), se retoman sin esperar a este pedido.
+    if (entregas.rows.some((e) => e.estado_correccion === 'entregado' || e.estado_correccion === 'en-evaluacion')) {
+      programarCorreccion({ forzar: true })
+    }
     return {
       usuarios: usuarios.rows.map(aUsuario),
       clases: clases.rows.map(aClase),
       documentos: documentos.rows.map((r) => aDocumento(r)),
       turnos: turnos.rows.map((t) => aTurno(t, aperturas[t.id])),
-      entregas: entregas.rows.map((r) => aEntrega(r)),
+      entregas: entregas.rows.map((r) => aEntrega(r, { resumen: resumenes[r.id] })),
     }
   }
 
@@ -271,6 +288,8 @@ async function validarDocumento(client, body, profesor) {
   }
   const errorBloques = validateBlocks(bloques)
   if (errorBloques) throw new HttpError(400, errorBloques)
+  const umbralConfianza = body.umbralConfianza ?? UMBRAL_POR_DEFECTO
+  if (!validarUmbral(umbralConfianza)) throw new HttpError(400, 'El umbral de confianza tiene que ser un número entre 0 y 1.')
   const horarios = Array.isArray(body.horarios) ? body.horarios : []
   for (const h of horarios) {
     if (!esObjeto(h)) throw new HttpError(400, 'Revisá los turnos asignados.')
@@ -286,6 +305,7 @@ async function validarDocumento(client, body, profesor) {
       herramientas: getHerramientas(body),
       duracion: body.duracion,
       bloques,
+      umbralConfianza,
     },
     horarios: horarios.map(({ id, turno, fecha, horaInicio }) => ({ id: typeof id === 'string' ? id : undefined, turno, fecha, horaInicio })),
   }
@@ -296,9 +316,9 @@ ruta('POST', '/api/documentos', 'profesor', async ({ body, sesion }) =>
     const { clase, valores: v, horarios } = await validarDocumento(c, body, sesion.username)
     if (horarios.length === 0) throw new HttpError(400, 'Asigná al menos un turno.')
     const { rows } = await c.query(
-      `insert into documentos (id, profesor, clase_id, titulo, tema, herramientas, duracion, bloques, contenido)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning *`,
-      [crypto.randomUUID(), sesion.username, v.claseId, v.titulo, v.tema, v.herramientas, v.duracion, JSON.stringify(v.bloques), textFromBlocks(v.bloques)]
+      `insert into documentos (id, profesor, clase_id, titulo, tema, herramientas, duracion, bloques, contenido, umbral_confianza)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning *`,
+      [crypto.randomUUID(), sesion.username, v.claseId, v.titulo, v.tema, v.herramientas, v.duracion, JSON.stringify(v.bloques), textFromBlocks(v.bloques), v.umbralConfianza]
     )
     const antes = await turnosParaCambiar(c, sesion.username)
     const despues = aplicarHorarios(antes, {
@@ -319,18 +339,22 @@ ruta('PUT', '/api/documentos/:id', 'profesor', async ({ params, body, sesion }) 
       throw new HttpError(400, 'La duración no se puede cambiar: el parcial ya se empezó a tomar.')
     }
     // El tema y las consignas quedan fijos cuando algún alumno ya empezó (US2): su entrega responde a esa versión.
-    if (v.tema !== anterior.tema || !isDeepStrictEqual(v.bloques, anterior.bloques)) {
+    // Los bloques incluyen los puntajes (pesos) y los criterios de corrección: tampoco cambian con un intento entregado
+    // o en evaluación (Sprint final, US3), ni el umbral de confianza.
+    if (v.tema !== anterior.tema || !isDeepStrictEqual(v.bloques, anterior.bloques) || v.umbralConfianza !== Number(anterior.umbral_confianza)) {
       const { rows: [{ iniciado }] } = await c.query(
         `select exists (select 1 from sesiones_examen where parcial_id = $1)
              or exists (select 1 from entregas where parcial_id = $1) as iniciado`,
         [params.id]
       )
-      if (iniciado) throw new HttpError(409, 'El tema y las consignas no se pueden cambiar: un alumno ya empezó el parcial.')
+      if (iniciado) {
+        throw new HttpError(409, 'El tema, las consignas, los pesos y los criterios de corrección no se pueden cambiar: un alumno ya empezó el parcial.', { codigo: 'estructura-bloqueada' })
+      }
     }
     const { rows } = await c.query(
       `update documentos set clase_id = $2, titulo = $3, tema = $4, herramientas = $5, duracion = $6, bloques = $7, contenido = $8,
-       fecha_modificacion = now() where id = $1 returning *`,
-      [params.id, v.claseId, v.titulo, v.tema, v.herramientas, v.duracion, JSON.stringify(v.bloques), textFromBlocks(v.bloques)]
+       umbral_confianza = $9, fecha_modificacion = now() where id = $1 returning *`,
+      [params.id, v.claseId, v.titulo, v.tema, v.herramientas, v.duracion, JSON.stringify(v.bloques), textFromBlocks(v.bloques), v.umbralConfianza]
     )
     const despues = aplicarHorarios(antes, {
       profesor: sesion.username, parcialId: params.id, horarios, duracion: v.duracion, alumnosClase: clase.alumnos,
@@ -539,12 +563,114 @@ ruta('PUT', '/api/entregas/:id/correccion', 'profesor', async ({ params, body, s
   }
   if (!esTexto(body.comentario ?? '', 10_000)) throw new HttpError(400, 'La devolución es demasiado larga.')
   const correccion = { nota, comentario: (body.comentario ?? '').trim(), fecha: new Date().toISOString() }
+  // Nota única de 0 a 10 (Sprints 1 a 3): solo para entregas sin corrección por pregunta. Si la entrega ya estaba
+  // publicada, la nota publicada se actualiza; si no, el alumno la ve recién cuando se publica.
   const { rows } = await query(
-    'update entregas set correccion = $3 where id = $1 and profesor = $2 returning *',
-    [params.id, sesion.username, correccion]
+    `update entregas set correccion = $3, nota = case when estado_correccion = 'publicado' then $4 else nota end
+     where id = $1 and profesor = $2 and not exists (select 1 from evaluaciones where entrega_id = $1) returning *`,
+    [params.id, sesion.username, correccion, nota]
   )
-  if (!rows[0]) throw new HttpError(404, 'La entrega no existe.')
+  if (!rows[0]) {
+    const { rows: [e] } = await query('select 1 from entregas where id = $1 and profesor = $2', [params.id, sesion.username])
+    if (!e) throw new HttpError(404, 'La entrega no existe.')
+    throw new HttpError(409, 'Esta entrega se corrige por pregunta desde la revisión.', { codigo: 'por-pregunta' })
+  }
   return { entrega: aEntrega(rows[0]) }
+})
+
+// --- Corrección automática, revisión y publicación (profesor). Sprint final: RF11 y RF12.
+
+// Revisión de una entrega: preguntas, respuestas originales, evaluación de cada juez (puntajes, criterios, feedback,
+// confianza, errores), alertas, incidentes del modo restringido (los eventos del Sprint 4) y auditoría.
+ruta('GET', '/api/entregas/:id/revision', 'profesor', async ({ params, sesion }) => {
+  const { rows: [e] } = await query('select * from entregas where id = $1 and profesor = $2', [params.id, sesion.username])
+  if (!e) throw new HttpError(404, 'La entrega no existe.')
+  const [evaluaciones, auditoria, eventos, resumenes] = await Promise.all([
+    evaluacionesDe({ query }, e.id),
+    auditoriaDe({ query }, e.id),
+    query(
+      `select ev.*, u.nombre as actor_nombre from eventos_seguridad ev left join usuarios u on u.username = ev.actor
+       where ev.parcial_id = $1 and ev.alumno = $2 order by ev.fecha_servidor, ev.secuencia`,
+      [e.parcial_id, e.alumno]
+    ),
+    resumenesDe({ query }, [e.id]),
+  ])
+  if (evaluaciones.some((r) => r.estado === 'pendiente' || r.estado === 'procesando')) programarCorreccion({ forzar: true })
+  return {
+    entrega: aEntrega(e, { resumen: resumenes[e.id] }),
+    evaluaciones: evaluaciones.map(aEvaluacion),
+    auditoria,
+    eventos: eventos.rows.map((ev) => ({
+      id: ev.id, tipo: ev.tipo, fechaServidor: ev.fecha_servidor.toISOString(), fechaCliente: ev.fecha_cliente?.toISOString() ?? null,
+      actor: ev.actor, actorNombre: ev.actor === 'sistema' ? 'Sistema' : ev.actor_nombre ?? ev.actor, metadata: ev.metadata,
+    })),
+  }
+})
+
+// Ajuste docente de una pregunta (puntaje y/o feedback): queda auditado y recalcula la nota.
+ruta('PUT', '/api/entregas/:id/evaluaciones/:bloqueId', 'profesor', async ({ params, body, sesion }) =>
+  tx(async (c) => {
+    const { evaluacion, entrega } = await revisarEvaluacion(c, { entregaId: params.id, bloqueId: params.bloqueId, body, profesor: sesion.username })
+    return { evaluacion, entrega: aEntrega(entrega, { resumen: (await resumenesDe(c, [params.id]))[params.id] }) }
+  })
+)
+
+// Vuelve a mandar a los jueces las preguntas en Error, o inicia la corrección de una entrega que no la tenía.
+ruta('POST', '/api/entregas/:id/reevaluar', 'profesor', async ({ params, sesion }) =>
+  tx(async (c) => {
+    const entrega = await reevaluar(c, { entregaId: params.id, profesor: sesion.username })
+    return { entrega: aEntrega(entrega, { resumen: (await resumenesDe(c, [params.id]))[params.id] }) }
+  })
+)
+
+// Publicación individual. Rechaza (409) si falta algún puntaje definitivo y dice cuáles.
+ruta('POST', '/api/entregas/:id/publicar', 'profesor', async ({ params, sesion }) =>
+  tx(async (c) => {
+    const { entrega, yaPublicada } = await publicarEntrega(c, { entregaId: params.id, profesor: sesion.username })
+    return { entrega: aEntrega(entrega, { resumen: (await resumenesDe(c, [params.id]))[params.id] }), yaPublicada }
+  })
+)
+
+// Corrección de un turno: el seguimiento de cada alumno asignado (No abrió / No completó / Entregado…) con el estado de
+// corrección, la nota y las alertas de su entrega.
+ruta('GET', '/api/turnos/:id/correccion', 'profesor', async ({ params, sesion }) => {
+  const { rows: [turno] } = await query('select * from turnos where id = $1 and profesor = $2', [params.id, sesion.username])
+  if (!turno) throw new HttpError(404, 'El turno no existe.')
+  await tx((c) => normalizarSesiones(c, 's.turno_id = $1', turno.id))
+  const filas = await filasSeguimiento(turno)
+  const { rows: entregas } = await query('select * from entregas where parcial_id = $1 and alumno = any($2)', [turno.parcial_id, turno.alumnos])
+  const resumenes = await resumenesDe({ query }, entregas.map((e) => e.id))
+  if (entregas.some((e) => e.estado_correccion === 'entregado' || e.estado_correccion === 'en-evaluacion')) programarCorreccion({ forzar: true })
+  const porAlumno = new Map(entregas.map((e) => [e.alumno, aEntrega(e, { resumen: resumenes[e.id] })]))
+  return {
+    alumnos: filas.map((f) => {
+      const e = porAlumno.get(f.username)
+      return { ...f, correccion: e ? { estado: e.estadoCorreccion, nota: e.nota, resumen: e.resumenCorreccion, fechaPublicacion: e.fechaPublicacion } : null }
+    }),
+  }
+})
+
+// Publicación masiva de las entregas listas de un turno. Informa las publicadas y las que quedaron pendientes.
+ruta('POST', '/api/turnos/:id/publicar', 'profesor', async ({ params, sesion }) => publicarTurno({ turnoId: params.id, profesor: sesion.username }))
+
+// Pasada por la cola de correcciones para un cron (Vercel Cron manda `Authorization: Bearer $CRON_SECRET`). Retoma
+// reintentos y trabajos que una instancia dejó a medias.
+ruta('GET', '/api/correcciones/procesar', null, async ({ headers }) => {
+  const secreto = process.env.CRON_SECRET
+  if (!secreto || headers.authorization !== `Bearer ${secreto}`) throw new HttpError(401, 'No autorizado.')
+  return { resumen: await procesarCola({ maxMs: 50_000 }) }
+})
+
+// --- Resultados (alumno). Sprint final: RF13.
+
+// Resultado publicado de una entrega propia. Antes de la publicación, o si la entrega es de otro alumno: 403.
+ruta('GET', '/api/entregas/:id/resultado', 'alumno', async ({ params, sesion }) => {
+  const { rows: [e] } = await query('select * from entregas where id = $1', [params.id])
+  if (!e || e.alumno !== sesion.username) throw new HttpError(403, 'No tenés permiso para ver este resultado.')
+  if (e.estado_correccion !== 'publicado') {
+    throw new HttpError(403, 'La nota todavía no fue publicada.', { codigo: 'no-publicada', estado: aEntrega(e, { paraAlumno: true }).estadoCorreccion })
+  }
+  return { resultado: await resultadoParaAlumno({ query }, e) }
 })
 
 // --- Examen (alumno)

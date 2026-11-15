@@ -3,6 +3,8 @@
 
 import { blocksParaAlumno } from '../src/documentBlocks.js'
 import { turnoFin, turnoInicio } from '../src/turnos.js'
+import { estadoParaAlumno } from '../src/correccion.js'
+import { encolarEntrega } from './correccion.js'
 
 // Margen después de la hora límite para aceptar el último guardado o la entrega (demora de la red).
 export const TOLERANCIA_MS = 5000
@@ -28,6 +30,7 @@ export function aClase(r) {
 }
 
 export function aDocumento(r, { paraAlumno = false } = {}) {
+  const umbral = paraAlumno ? {} : { umbralConfianza: r.umbral_confianza == null ? null : Number(r.umbral_confianza) }
   return {
     id: r.id,
     profesor: r.profesor,
@@ -42,6 +45,7 @@ export function aDocumento(r, { paraAlumno = false } = {}) {
     fechaCreacion: iso(r.fecha_creacion),
     fechaModificacion: iso(r.fecha_modificacion),
     fechaPublicacion: iso(r.fecha_publicacion),
+    ...umbral,
   }
 }
 
@@ -62,7 +66,7 @@ export function aTurno(r, aperturas = {}) {
   }
 }
 
-export function aEntrega(r, { paraAlumno = false } = {}) {
+export function aEntrega(r, { paraAlumno = false, resumen = null } = {}) {
   return {
     id: r.id,
     parcialId: r.parcial_id,
@@ -80,7 +84,16 @@ export function aEntrega(r, { paraAlumno = false } = {}) {
     enviadoPorTiempo: r.enviado_por_tiempo,
     enviadoPorSistema: r.enviado_por_sistema,
     salidaVoluntaria: Boolean(r.salida_voluntaria),
-    correccion: r.correccion,
+    // El alumno ve la nota y la devolución recién cuando el profesor las publica; antes, solo "Entregado" o
+    // "En corrección" (sin nota, sin puntajes sugeridos ni datos de la evaluación).
+    correccion: paraAlumno && r.estado_correccion !== 'publicado' ? null : r.correccion,
+    estadoCorreccion: paraAlumno ? estadoParaAlumno(r.estado_correccion) : r.estado_correccion,
+    fechaPublicacion: iso(r.fecha_publicacion),
+    ...(paraAlumno ? {} : {
+      nota: r.nota == null ? null : Number(r.nota),
+      umbralConfianza: Number(r.umbral_confianza),
+      resumenCorreccion: resumen ?? null,
+    }),
   }
 }
 
@@ -158,15 +171,19 @@ export async function aperturasDe(client, turnoIds, alumno = null) {
 
 // --- Entregas
 
-// Crea la entrega de una sesión con una copia del parcial. Si ya existía, no hace nada.
+// Crea la entrega de una sesión con una copia del parcial. Si ya existía, no hace nada. En la misma transacción encola
+// la corrección automática de cada pregunta (Sprint final): si la entrega se guarda, su corrección también.
 export async function crearEntrega(client, sesion, { respuestas, porTiempo, porSistema, fechaEntrega, salidaVoluntaria = false }) {
-  await client.query(
+  const { rows } = await client.query(
     `insert into entregas (id, parcial_id, profesor, alumno, alumno_nombre, titulo, tema, herramientas, duracion, bloques,
                            respuestas, fecha_inicio, fecha_entrega, enviado_por_tiempo, enviado_por_sistema,
-                           salida_voluntaria)
-     select $1, d.id, d.profesor, u.username, u.nombre, d.titulo, d.tema, d.herramientas, d.duracion, d.bloques, $2, $3, $4, $5, $6, $9
+                           salida_voluntaria, umbral_confianza)
+     select $1, d.id, d.profesor, u.username, u.nombre, d.titulo, d.tema, d.herramientas, d.duracion, d.bloques, $2, $3, $4, $5, $6, $9,
+            d.umbral_confianza
      from documentos d, usuarios u where d.id = $7 and u.username = $8
-     on conflict (parcial_id, alumno) do nothing`,
+     on conflict (parcial_id, alumno) do nothing
+     returning id`,
     [crypto.randomUUID(), JSON.stringify(respuestas), sesion.apertura, fechaEntrega, porTiempo, porSistema, sesion.parcial_id, sesion.alumno, salidaVoluntaria]
   )
+  if (rows[0]) await encolarEntrega(client, rows[0].id)
 }

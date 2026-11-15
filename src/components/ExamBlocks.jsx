@@ -26,6 +26,9 @@ export default function ExamBlocks({
           {index + 1}. {BLOCK_TYPES[block.tipo]}
           {block.tipo === 'codigo' && ` · ${CODE_LANGUAGES[block.lenguaje] ?? block.lenguaje}`}
         </span>
+        {typeof block.puntaje === 'number' && (
+          <span className="muted small block-puntaje">{String(block.puntaje).replace('.', ',')} {block.puntaje === 1 ? 'punto' : 'puntos'}</span>
+        )}
       </div>
       {block.consigna && <div className="content block-prompt">{block.consigna}</div>}
       {block.tipo === 'texto' && block.contenido && <div className="content block-text">{block.contenido}</div>}
@@ -42,7 +45,10 @@ export default function ExamBlocks({
           />
         </div>
       ) : (
-        <BlockSetup block={block} />
+        <>
+          <BlockSetup block={block} />
+          <CriteriosSetup block={block} />
+        </>
       )}
     </section>
   ))
@@ -82,4 +88,20 @@ function BlockSetup({ block }) {
   }
 
   return null
+}
+
+// Criterios de corrección que usa el agente juez (solo los ve el profesor: el servidor no se los manda al alumno).
+function CriteriosSetup({ block }) {
+  if (!Array.isArray(block.criterios) || block.criterios.length === 0) return null
+  const total = block.criterios.reduce((s, c) => s + c.peso, 0)
+  return (
+    <div className="block-section">
+      <span className="block-answer-label">Criterios de corrección</span>
+      <ul className="mc-setup">
+        {block.criterios.map((c) => (
+          <li key={c.id}>{c.texto} <span className="muted small">(peso {String(c.peso).replace('.', ',')} · {Math.round((c.peso / total) * 100)} %)</span></li>
+        ))}
+      </ul>
+    </div>
+  )
 }

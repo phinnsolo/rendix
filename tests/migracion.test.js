@@ -18,9 +18,12 @@ test('migración sobre datos existentes: conserva sesiones, respuestas y entrega
     insert into sesiones_examen (turno_id, alumno, parcial_id, deadline, respuestas, seq, estado)
       values ('t1', 'a', 'd1', now() - interval '23 hours', '{"b1": "respuesta vieja"}', 7, 'entregado-sistema');
     insert into entregas (id, parcial_id, profesor, alumno, alumno_nombre, titulo, respuestas) values ('e1', 'd1', 'p', 'a', 'Alu', 'Parcial viejo', '{"b1": "respuesta vieja"}');
+    insert into documentos (id, profesor, titulo) values ('d2', 'p', 'Parcial corregido');
+    insert into entregas (id, parcial_id, profesor, alumno, alumno_nombre, titulo, respuestas, correccion)
+      values ('e2', 'd2', 'p', 'a', 'Alu', 'Parcial corregido', '{}', '{"nota": 7.5, "comentario": "Bien", "fecha": "2026-05-01T12:00:00.000Z"}');
   `)
 
-  assert.deepEqual(await aplicarMigraciones(ejecutar), ['001_modo_restringido.sql', '002_clases_nombre_unico.sql'])
+  assert.deepEqual(await aplicarMigraciones(ejecutar), ['001_modo_restringido.sql', '002_clases_nombre_unico.sql', '003_correccion_automatica.sql'])
   assert.deepEqual(await aplicarMigraciones(ejecutar), []) // ya aplicada: no se repite
 
   const { rows: [s] } = await db.query("select * from sesiones_examen where turno_id = 't1'")
@@ -32,6 +35,14 @@ test('migración sobre datos existentes: conserva sesiones, respuestas y entrega
   assert.equal(s.reanudaciones, 0)
   const { rows: [e] } = await db.query("select * from entregas where id = 'e1'")
   assert.equal(e.salida_voluntaria, false)
+  // Sprint final: la entrega sin corregir queda "entregado"; la que el profesor ya había corregido (visible para el
+  // alumno) queda publicada con su nota. Las respuestas no cambian.
+  assert.equal(e.estado_correccion, 'entregado')
+  assert.deepEqual(e.respuestas, { b1: 'respuesta vieja' })
+  const { rows: [e2] } = await db.query("select * from entregas where id = 'e2'")
+  assert.equal(e2.estado_correccion, 'publicado')
+  assert.equal(Number(e2.nota), 7.5)
+  assert.ok(e2.fecha_publicacion)
   // El nuevo estado ya es válido; uno inventado no.
   await db.exec("update sesiones_examen set estado = 'incidente' where turno_id = 't1'")
   await assert.rejects(db.exec("update sesiones_examen set estado = 'reanudado' where turno_id = 't1'"))
@@ -55,6 +66,6 @@ test('migración 002: con clases de nombre repetido se detiene, las nombra y no 
 
   // Renombrada a mano, se aplica.
   await db.exec("update clases set nombre = 'Matemáticas II' where id = 'c2'")
-  assert.deepEqual(await aplicarMigraciones(ejecutar), ['002_clases_nombre_unico.sql'])
+  assert.deepEqual(await aplicarMigraciones(ejecutar), ['002_clases_nombre_unico.sql', '003_correccion_automatica.sql'])
   await db.close()
 })

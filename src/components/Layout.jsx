@@ -60,7 +60,7 @@ export default function Layout() {
               <NavLink to="/documentos">Parciales</NavLink>
               <NavLink to="/monitoreo">Monitoreo</NavLink>
               <NavLink to="/entregas">
-                Entregas{sinCorregir > 0 && <span className="nav-badge" aria-label={`${sinCorregir} sin corregir`}>{sinCorregir}</span>}
+                Entregas{sinCorregir > 0 && <span className="nav-badge" aria-label={`${sinCorregir} por revisar`}>{sinCorregir}</span>}
               </NavLink>
             </>
           )}

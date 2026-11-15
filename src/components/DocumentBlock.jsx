@@ -4,6 +4,7 @@ import CodeBlock from './CodeBlock.jsx'
 import MultipleChoiceBlock from './MultipleChoiceBlock.jsx'
 import TextBlock from './TextBlock.jsx'
 import GeoGebraApplet from './GeoGebraApplet.jsx'
+import CorreccionBloque from './CorreccionBloque.jsx'
 
 // Un apartado en modo edición: tipo y controles arriba, consigna, y la configuración propia del tipo.
 export default function DocumentBlock({ block, index, total, onChange, onMove, onRemove, onGeoGebraReady }) {
@@ -33,6 +34,7 @@ export default function DocumentBlock({ block, index, total, onChange, onMove, o
       {block.tipo === 'geogebra' && (
         <GeoGebraApplet initialBase64={block.ggbBase64} onReady={onGeoGebraReady} />
       )}
+      <CorreccionBloque block={block} onChange={onChange} />
     </section>
   )
 }

@@ -115,7 +115,7 @@ export default function ClaseProfesorPage() {
                   {isPublished(doc) && (
                     <p className="muted small">
                       {alumnosLabel(asignados)} · Enviaron {entregas.length} de {asignados}
-                      {entregas.some((e) => !isGraded(e)) && ` · ${entregas.filter((e) => !isGraded(e)).length} sin corregir`}
+                      {entregas.some((e) => !isGraded(e)) && ` · ${entregas.filter((e) => !isGraded(e)).length} sin publicar`}
                     </p>
                   )}
                 </div>
@@ -141,8 +141,8 @@ export default function ClaseProfesorPage() {
         <p className="muted">Todavía no hay entregas en esta clase.</p>
       ) : (
         <>
-          <EntregasList titulo="Sin corregir" entregas={sinCorregir} clase={clase} vacio="No hay entregas sin corregir." />
-          <EntregasList titulo="Corregidas" entregas={corregidas} clase={clase} vacio="Todavía no corregiste ninguna entrega." />
+          <EntregasList titulo="Por revisar" entregas={sinCorregir} clase={clase} vacio="No hay entregas por revisar." />
+          <EntregasList titulo="Publicadas" entregas={corregidas} clase={clase} vacio="Todavía no publicaste ninguna nota." />
         </>
       )}
     </>
@@ -168,7 +168,7 @@ function EntregasList({ titulo, entregas, clase, vacio }) {
                   </p>
                 </div>
                 <Link to={to} className={isGraded(entrega) ? 'button secondary' : 'button'}>
-                  {isGraded(entrega) ? 'Ver corrección' : 'Corregir'}
+                  {isGraded(entrega) ? 'Ver corrección' : 'Revisar'}
                 </Link>
               </li>
             )

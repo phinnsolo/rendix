@@ -65,16 +65,18 @@ export async function crearEntorno() {
 
   let n = 0
   // Un parcial nuevo de profesor1 que se empieza a tomar ahora ("Tomar ahora"), con los alumnos de la clase.
-  async function parcialEnCurso({ duracion = 60 } = {}) {
+  // `bloques` y `umbral`: apartados con puntajes y criterios de corrección (Sprint final).
+  async function parcialEnCurso({ duracion = 60, bloques = null, umbral = 0.7 } = {}) {
     n += 1
     const id = `parcial${n}`
-    const bloques = [
+    bloques ??= [
       { id: 'b1', tipo: 'texto', consigna: '¿Cuánto es 2 + 2?', contenido: '' },
       { id: 'b2', tipo: 'texto', consigna: 'Explicá por qué.', contenido: '' },
     ]
     await pool.query(
-      `insert into documentos (id, profesor, clase_id, titulo, tema, duracion, bloques) values ($1, 'profesor1', 'clase1', $2, 'Tema 1', $3, $4)`,
-      [id, `Parcial ${n}`, duracion, JSON.stringify(bloques)]
+      `insert into documentos (id, profesor, clase_id, titulo, tema, duracion, bloques, umbral_confianza)
+       values ($1, 'profesor1', 'clase1', $2, 'Tema 1', $3, $4, $5)`,
+      [id, `Parcial ${n}`, duracion, JSON.stringify(bloques), umbral]
     )
     const { status, body } = await api('POST', `/api/documentos/${id}/tomar-ahora`, { token: tokens.profesor1 })
     if (status !== 200) throw new Error(`tomar-ahora: ${status} ${JSON.stringify(body)}`)

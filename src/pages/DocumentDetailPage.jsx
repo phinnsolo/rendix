@@ -99,7 +99,7 @@ export default function DocumentDetailPage() {
                   <p className="muted small">{alumnosLabel(turno.alumnos.length)}</p>
                 </div>
                 <Link to={`/documentos/${doc.id}/turnos/${turno.id}`} className="button secondary">
-                  Alumnos y seguimiento
+                  Seguimiento y notas
                 </Link>
               </li>
             ))}

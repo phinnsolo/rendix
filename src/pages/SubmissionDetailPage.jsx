@@ -1,11 +1,9 @@
-import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { getClase } from '../clasesStore.js'
 import { formatDate } from '../formatDate.js'
 import { getSubmission } from '../submissionsStore.js'
-import ExamBlocks from '../components/ExamBlocks.jsx'
 import ExamHeader from '../components/ExamHeader.jsx'
-import GradingForm from '../components/GradingForm.jsx'
+import RevisionEntrega from '../components/RevisionEntrega.jsx'
 import NotFound from '../components/NotFound.jsx'
 import SubmissionChips from '../components/SubmissionChips.jsx'
 import BackLink from '../components/BackLink.jsx'
@@ -17,11 +15,12 @@ function tiempoUsado({ fechaInicio, fechaEntrega, duracion }) {
   return minutos < 1 ? 'menos de 1 min' : `${minutos} min`
 }
 
-// Entrega de un alumno, tal como la envió (usa la copia del parcial guardada en la entrega), con su corrección.
+// Entrega de un alumno, tal como la envió (usa la copia del parcial guardada en la entrega), con la revisión de la
+// corrección automática: evaluación de cada pregunta, ajustes, incidentes, auditoría y publicación.
 export default function SubmissionDetailPage() {
   const { id, entregaId } = useParams()
   const [searchParams] = useSearchParams()
-  const [entrega, setEntrega] = useState(() => getSubmission(entregaId))
+  const entrega = getSubmission(entregaId)
   const clase = getClase(searchParams.get('clase'))
   const back = clase
     ? { to: `/clases/${clase.id}?tab=entregas`, label: `Volver a ${clase.nombre}` }
@@ -44,10 +43,7 @@ export default function SubmissionDetailPage() {
         {entrega.fechaInicio && ` · Tiempo usado: ${tiempoUsado(entrega)}`}
       </p>
       <ExamHeader tema={entrega.tema} herramientas={entrega.herramientas} duracion={entrega.duracion ?? null} />
-      <div className="blocks">
-        <ExamBlocks blocks={entrega.bloques} respuestas={entrega.respuestas} readOnly showCorrect />
-      </div>
-      <GradingForm entrega={entrega} onGraded={setEntrega} />
+      <RevisionEntrega key={entrega.id} entregaInicial={entrega} />
     </>
   )
 }
